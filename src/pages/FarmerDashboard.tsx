@@ -84,6 +84,8 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
   const [resubmitForm, setResubmitForm] = useState({
     fullName: '',
     mobile: '',
+    email: '',
+    farmAddress: '',
     village: '',
     mandal: '',
     district: '',
@@ -99,6 +101,8 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
       setResubmitForm({
         fullName: user.fullName || '',
         mobile: user.mobile || '',
+        email: user.email || '',
+        farmAddress: user.farmAddress || '',
         village: user.village || '',
         mandal: user.mandal || '',
         district: user.district || '',
@@ -1220,7 +1224,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs" id="edit-profile-form">
               <div>
-                <label className="font-bold text-stone-600 block mb-1">Full Legal Name</label>
+                <label className="font-bold text-stone-600 block mb-1">Full Legal Name *</label>
                 <input
                   type="text"
                   value={resubmitForm.fullName}
@@ -1229,7 +1233,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
                 />
               </div>
               <div>
-                <label className="font-bold text-stone-600 block mb-1">Mobile (Linked to Aadhaar)</label>
+                <label className="font-bold text-stone-600 block mb-1">Mobile (Linked to Aadhaar) *</label>
                 <input
                   type="text"
                   value={resubmitForm.mobile}
@@ -1238,7 +1242,26 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
                 />
               </div>
               <div>
-                <label className="font-bold text-stone-600 block mb-1">Village & Mandal</label>
+                <label className="font-bold text-stone-600 block mb-1">Email Address</label>
+                <input
+                  type="email"
+                  disabled
+                  value={resubmitForm.email}
+                  className="w-full border border-stone-200 bg-stone-100 rounded-xl p-3 text-stone-500 font-semibold cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="font-bold text-stone-600 block mb-1">Farm / Survey Address</label>
+                <input
+                  type="text"
+                  value={resubmitForm.farmAddress}
+                  onChange={(e) => setResubmitForm({ ...resubmitForm, farmAddress: e.target.value })}
+                  placeholder="Survey No, Field location"
+                  className="w-full border border-stone-200 rounded-xl p-3 text-stone-900 font-semibold focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="font-bold text-stone-600 block mb-1">Village & Mandal *</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -1257,7 +1280,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
                 </div>
               </div>
               <div>
-                <label className="font-bold text-stone-600 block mb-1">District & State</label>
+                <label className="font-bold text-stone-600 block mb-1">District & State *</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -1274,6 +1297,27 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
                     placeholder="State"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="font-bold text-stone-600 block mb-1">Farming Experience (Years)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="60"
+                  value={resubmitForm.farmingExperience}
+                  onChange={(e) => setResubmitForm({ ...resubmitForm, farmingExperience: parseInt(e.target.value) || 0 })}
+                  className="w-full border border-stone-200 rounded-xl p-3 text-stone-900 font-semibold focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="font-bold text-stone-600 block mb-1">Farming Bio / Primary Crops</label>
+                <input
+                  type="text"
+                  value={resubmitForm.bio}
+                  onChange={(e) => setResubmitForm({ ...resubmitForm, bio: e.target.value })}
+                  placeholder="e.g. Paddy, Red Chilli, Vegetables"
+                  className="w-full border border-stone-200 rounded-xl p-3 text-stone-900 font-semibold focus:border-emerald-500"
+                />
               </div>
             </div>
             

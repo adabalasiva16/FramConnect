@@ -66,4 +66,29 @@ export const orderService = {
     }
     return updateLocalOrderStatus(orderId, status);
   },
+
+  async cancelOrder(
+    orderId: string,
+    cancellationReason: string = 'Cancelled by customer',
+    cancelledBy: 'customer' | 'farmer' | 'admin' = 'customer'
+  ): Promise<Order | null> {
+    const cancelPayload = {
+      status: 'cancelled' as OrderStatus,
+      cancellationReason,
+      cancelledBy,
+      cancelledAt: new Date().toISOString(),
+    };
+
+    if (isFirebaseConfigured()) {
+      try {
+        await updateDoc(doc(db, 'orders', orderId), cancelPayload);
+      } catch (err) {
+        console.warn('[Firebase] cancelOrder updateDoc error:', err);
+      }
+    }
+
+    const updated = updateLocalOrderStatus(orderId, 'cancelled');
+    window.dispatchEvent(new Event('farmconnect_storage_update'));
+    return updated;
+  },
 };

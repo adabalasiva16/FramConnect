@@ -104,7 +104,8 @@ export const farmerService = {
   async approveFarmer(farmerId: string, adminUid?: string): Promise<void> {
     const updatePayload = {
       isVerified: true,
-      verificationStatus: 'verified' as const,
+      verificationStatus: 'approved' as const,
+      approvalStatus: 'approved' as const,
       approvedAt: new Date().toISOString(),
       approvedBy: adminUid || 'admin',
       rejectionReason: '',
@@ -114,13 +115,13 @@ export const farmerService = {
       try {
         await setDoc(doc(db, 'users', farmerId), updatePayload, { merge: true });
       } catch (e) {
-        console.warn('[Firebase] approveFarmer users setDoc error:', e);
+        console.error('[Firebase] approveFarmer users setDoc error:', e);
       }
       try {
         const existing = await this.getById(farmerId);
         await setDoc(doc(db, 'farmers', farmerId), { ...(existing || {}), ...updatePayload }, { merge: true });
       } catch (err) {
-        console.warn('[Firebase] approveFarmer farmers setDoc error:', err);
+        console.error('[Firebase] approveFarmer farmers setDoc error:', err);
       }
     }
 
@@ -132,6 +133,7 @@ export const farmerService = {
     const updatePayload = {
       isVerified: false,
       verificationStatus: 'rejected' as const,
+      approvalStatus: 'rejected' as const,
       rejectedAt: new Date().toISOString(),
       rejectedBy: adminUid || 'admin',
       rejectionReason: reason || 'Information verification failed',
@@ -140,12 +142,14 @@ export const farmerService = {
     if (isFirebaseConfigured()) {
       try {
         await setDoc(doc(db, 'users', farmerId), updatePayload, { merge: true });
-      } catch (e) {}
+      } catch (e) {
+        console.error('[Firebase] rejectFarmer users setDoc error:', e);
+      }
       try {
         const existing = await this.getById(farmerId);
         await setDoc(doc(db, 'farmers', farmerId), { ...(existing || {}), ...updatePayload }, { merge: true });
       } catch (err) {
-        console.warn('[Firebase] rejectFarmer setDoc error:', err);
+        console.error('[Firebase] rejectFarmer farmers setDoc error:', err);
       }
     }
 

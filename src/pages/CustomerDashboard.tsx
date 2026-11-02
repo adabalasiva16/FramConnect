@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ShoppingBag,
   TrendingUp,
@@ -14,15 +14,22 @@ import {
   Heart,
   ChevronRight,
   User,
+  X,
+  Camera,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Ban,
+  LogOut,
 } from 'lucide-react';
 import { Order, Product, UserProfile, UserRole } from '../types';
 import { orderService } from '../services/orderService';
 import { productService } from '../services/productService';
 import { farmerService } from '../services/farmerService';
+import { userService } from '../services/userService';
+import { uploadProfilePicture } from '../services/imageUploadService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-
-import { LogOut } from 'lucide-react';
 
 interface CustomerDashboardProps {
   onNavigateToMarketplace: (searchOrCategory?: string) => void;
@@ -39,13 +46,142 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   onSelectProduct,
   onOpenAuth,
 }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const { language, t } = useLanguage();
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [nearbyFarmers, setNearbyFarmers] = useState<UserProfile[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Profile Edit State
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    fullName: user?.fullName || '',
+    mobile: user?.mobile || '',
+    email: user?.email || '',
+    deliveryAddress: user?.deliveryAddress || '',
+    village: user?.village || '',
+    district: user?.district || '',
+    state: user?.state || 'Andhra Pradesh',
+  });
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string>(user?.avatarUrl || '');
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [isUploadingProfileImg, setIsUploadingProfileImg] = useState(false);
+  const [profileUploadProgress, setProfileUploadProgress] = useState(0);
+  const [profileSuccessMsg, setProfileSuccessMsg] = useState('');
+  const [profileErrorMsg, setProfileErrorMsg] = useState('');
+  const profileFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Cancel Order State
+  const [cancelModalOrder, setCancelModalOrder] = useState<Order | null>(null);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [actionSuccessMsg, setActionSuccessMsg] = useState('');
+
+  // Keep profile form synced with user
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        fullName: user.fullName || '',
+        mobile: user.mobile || '',
+        email: user.email || '',
+        deliveryAddress: user.deliveryAddress || '',
+        village: user.village || '',
+        district: user.district || '',
+        state: user.state || 'Andhra Pradesh',
+      });
+      setProfileAvatarUrl(user.avatarUrl || '');
+    }
+  }, [user]);
+
+  const handleProfileFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProfileImageFile(file);
+    setProfileErrorMsg('');
+    const previewUrl = URL.createObjectURL(file);
+    setProfileImagePreview(previewUrl);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setProfileErrorMsg('');
+    setProfileSuccessMsg('');
+
+    try {
+      let finalAvatarUrl = profileAvatarUrl;
+
+      // Upload new profile picture if chosen
+      if (profileImageFile) {
+        setIsUploadingProfileImg(true);
+        setProfileUploadProgress(10);
+        finalAvatarUrl = await uploadProfilePicture(
+          profileImageFile,
+          user.id,
+          (pct) => setProfileUploadProgress(pct)
+        );
+        setIsUploadingProfileImg(false);
+        setProfileAvatarUrl(finalAvatarUrl);
+      }
+
+      const updates: Partial<UserProfile> = {
+        fullName: profileForm.fullName.trim(),
+        mobile: profileForm.mobile.trim(),
+        deliveryAddress: profileForm.deliveryAddress.trim(),
+        village: profileForm.village.trim(),
+        district: profileForm.district.trim(),
+        state: profileForm.state.trim(),
+        avatarUrl: finalAvatarUrl,
+      };
+
+      await userService.updateUserProfile(user.id, updates);
+      updateProfile(updates);
+
+      setProfileSuccessMsg(
+        language === 'te'
+          ? 'మీ ప్రొఫైల్ విజయవంతంగా నవీకరించబడింది!'
+          : 'Profile updated successfully!'
+      );
+      setTimeout(() => {
+        setProfileSuccessMsg('');
+        setEditProfileOpen(false);
+        setProfileImageFile(null);
+        setProfileImagePreview(null);
+      }, 1500);
+    } catch (err: any) {
+      setIsUploadingProfileImg(false);
+      setProfileErrorMsg('Failed to update profile: ' + (err?.message || String(err)));
+    }
+  };
+
+  const handleConfirmCancelOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cancelModalOrder) return;
+    setIsCancelling(true);
+    try {
+      await orderService.cancelOrder(
+        cancelModalOrder.id,
+        cancellationReason.trim() || 'Order cancelled by customer',
+        'customer'
+      );
+      setActionSuccessMsg(
+        language === 'te'
+          ? `ఆర్డర్ #${cancelModalOrder.orderNumber} విజయవంతంగా రద్దు చేయబడింది.`
+          : `Order #${cancelModalOrder.orderNumber} has been cancelled successfully.`
+      );
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+      setCancelModalOrder(null);
+      setCancellationReason('');
+      await loadData();
+    } catch (err: any) {
+      alert('Cancellation failed: ' + (err?.message || String(err)));
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -139,10 +275,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             </button>
 
             <button
-              onClick={() => {
-                 // In a real app, you'd open a profile modal here
-                 alert('Profile management functionality coming soon!');
-              }}
+              onClick={() => setEditProfileOpen(true)}
               className="bg-emerald-900/60 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm px-4 py-3 rounded-2xl border border-white/20 transition-colors flex items-center gap-1.5"
             >
               <User className="w-4 h-4" />
@@ -159,6 +292,14 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Feedback Alert Banner */}
+        {actionSuccessMsg && (
+          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-2xl flex items-center gap-2 text-xs font-extrabold animate-fade-in shadow-2xs">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>{actionSuccessMsg}</span>
+          </div>
+        )}
 
         {/* Active Orders Tracker Card (if any) */}
         {activeOrders.length > 0 && (
@@ -195,14 +336,27 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <span className="text-base font-black text-emerald-800">₹{ord.finalAmount}</span>
                     <button
                       onClick={() => onTrackOrder(ord)}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors shadow-xs"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-colors shadow-xs"
                     >
                       {t('trackOrder')}
                     </button>
+                    {ord.status === 'placed' && (
+                      <button
+                        onClick={() => {
+                          setCancelModalOrder(ord);
+                          setCancellationReason('');
+                        }}
+                        className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold px-3 py-2 rounded-xl transition-colors flex items-center gap-1 shadow-2xs"
+                        title="Cancel this order"
+                      >
+                        <Ban className="w-3.5 h-3.5" />
+                        <span>Cancel</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -351,6 +505,236 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* CUSTOMER EDIT PROFILE MODAL */}
+      {editProfileOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-emerald-100 flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 bg-gradient-to-r from-emerald-800 to-teal-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <User className="w-5 h-5 text-emerald-300" />
+                <h3 className="font-bold text-base sm:text-lg">
+                  {language === 'te' ? 'కస్టమర్ ప్రొఫైల్ సవరించండి' : 'Edit Customer Profile'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditProfileOpen(false)}
+                className="p-1 rounded-full hover:bg-white/20 transition-colors text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
+              {profileSuccessMsg && (
+                <div className="p-3 bg-emerald-100 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                  <span>{profileSuccessMsg}</span>
+                </div>
+              )}
+              {profileErrorMsg && (
+                <div className="p-3 bg-rose-100 border border-rose-300 text-rose-900 rounded-xl text-xs font-bold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{profileErrorMsg}</span>
+                </div>
+              )}
+
+              {/* Profile Image Section */}
+              <div className="flex items-center gap-4 p-3 bg-stone-50 rounded-2xl border border-stone-200">
+                <img
+                  src={profileImagePreview || profileAvatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200'}
+                  alt="Avatar Preview"
+                  className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shrink-0"
+                />
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    ref={profileFileInputRef}
+                    onChange={handleProfileFileSelect}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => profileFileInputRef.current?.click()}
+                    className="border border-stone-300 hover:border-emerald-600 bg-white hover:bg-emerald-50 text-emerald-800 font-extrabold text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors shadow-2xs"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Change Profile Picture</span>
+                  </button>
+                  <span className="text-[10px] text-stone-400 block mt-1">JPEG, PNG or WEBP (Square cropped)</span>
+                </div>
+              </div>
+
+              {isUploadingProfileImg && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-bold text-emerald-900">
+                    <span>Uploading photo to storage...</span>
+                    <span>{profileUploadProgress}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-emerald-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-600 rounded-full transition-all duration-200"
+                      style={{ width: `${profileUploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="font-bold text-stone-700 block mb-1">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={profileForm.fullName}
+                    onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
+                    className="w-full border border-stone-200 rounded-xl p-2.5 font-semibold text-stone-900 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-stone-700 block mb-1">Phone Number *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={profileForm.mobile}
+                    onChange={(e) => setProfileForm({ ...profileForm, mobile: e.target.value })}
+                    className="w-full border border-stone-200 rounded-xl p-2.5 font-semibold text-stone-900 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="text-xs">
+                <label className="font-bold text-stone-700 block mb-1">Email Address</label>
+                <input
+                  type="email"
+                  disabled
+                  value={profileForm.email}
+                  className="w-full border border-stone-200 bg-stone-100 rounded-xl p-2.5 font-semibold text-stone-500 cursor-not-allowed"
+                />
+              </div>
+
+              <div className="text-xs">
+                <label className="font-bold text-stone-700 block mb-1">Default Delivery Address *</label>
+                <input
+                  type="text"
+                  required
+                  value={profileForm.deliveryAddress}
+                  onChange={(e) => setProfileForm({ ...profileForm, deliveryAddress: e.target.value })}
+                  placeholder="Street / Flat / Door No, Landmark"
+                  className="w-full border border-stone-200 rounded-xl p-2.5 font-semibold text-stone-900 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <label className="font-bold text-stone-700 block mb-1">Village / City *</label>
+                  <input
+                    type="text"
+                    required
+                    value={profileForm.village}
+                    onChange={(e) => setProfileForm({ ...profileForm, village: e.target.value })}
+                    className="w-full border border-stone-200 rounded-xl p-2 font-semibold text-stone-900 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-stone-700 block mb-1">District *</label>
+                  <input
+                    type="text"
+                    required
+                    value={profileForm.district}
+                    onChange={(e) => setProfileForm({ ...profileForm, district: e.target.value })}
+                    className="w-full border border-stone-200 rounded-xl p-2 font-semibold text-stone-900 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-stone-700 block mb-1">State *</label>
+                  <input
+                    type="text"
+                    required
+                    value={profileForm.state}
+                    onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
+                    className="w-full border border-stone-200 rounded-xl p-2 font-semibold text-stone-900 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditProfileOpen(false)}
+                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold py-2.5 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploadingProfileImg}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold py-2.5 rounded-xl transition-colors shadow-md flex items-center justify-center gap-1.5"
+                >
+                  {isUploadingProfileImg ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Save Changes</span>}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CANCEL ORDER CONFIRMATION MODAL */}
+      {cancelModalOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-rose-100">
+            <div className="px-6 py-4 bg-rose-700 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Ban className="w-5 h-5" />
+                <h3 className="font-bold text-base">Cancel Order #{cancelModalOrder.orderNumber}</h3>
+              </div>
+              <button
+                onClick={() => setCancelModalOrder(null)}
+                className="p-1 rounded-full hover:bg-white/20 text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmCancelOrder} className="p-6 space-y-4 text-xs sm:text-sm">
+              <p className="text-stone-700 font-medium">
+                Are you sure you want to cancel this order from farmer <strong>{cancelModalOrder.farmerName}</strong>?
+              </p>
+
+              <div>
+                <label className="font-bold text-stone-700 block mb-1">Reason for Cancellation (Optional)</label>
+                <textarea
+                  rows={3}
+                  value={cancellationReason}
+                  onChange={(e) => setCancellationReason(e.target.value)}
+                  placeholder="e.g. Changed mind, ordered by mistake, address change..."
+                  className="w-full border border-stone-300 rounded-xl p-3 focus:outline-none focus:border-rose-500 font-medium text-xs"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCancelModalOrder(null)}
+                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold py-2.5 rounded-xl transition-colors"
+                >
+                  Keep Order
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCancelling}
+                  className="flex-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-extrabold py-2.5 rounded-xl transition-colors shadow-md flex items-center justify-center gap-1.5"
+                >
+                  {isCancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Confirm Cancellation</span>}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

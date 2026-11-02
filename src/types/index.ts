@@ -17,13 +17,16 @@ export interface UserProfile {
   farmingExperience?: number; // years
   bio?: string;
   isVerified?: boolean;
-  verificationStatus?: 'pending' | 'verified' | 'rejected';
+  verificationStatus?: 'pending' | 'verified' | 'approved' | 'rejected';
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;
   approvedAt?: string;
   approvedBy?: string;
   rejectedAt?: string;
   rejectedBy?: string;
   createdAt: string;
+  farmAddress?: string;
+  deliveryAddress?: string;
 }
 
 export type ProductCategory =
@@ -132,6 +135,10 @@ export interface Order {
   farmerVillage: string;
   createdAt: string;
   estimatedDeliveryDate: string;
+  deliveryDistanceKm?: number;
+  cancellationReason?: string;
+  cancelledBy?: string;
+  cancelledAt?: string;
   notes?: string;
   otpCode?: string;
 }

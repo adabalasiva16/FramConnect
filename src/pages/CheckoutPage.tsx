@@ -17,6 +17,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { PaymentMethod, Order } from '../types';
 import { orderService } from '../services/orderService';
 import { paymentService } from '../services/paymentService';
+import { farmerService } from '../services/farmerService';
+import { deliveryService } from '../services/deliveryService';
 
 interface CheckoutPageProps {
   onBackToCart: () => void;
@@ -45,11 +47,26 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
   const [upiId, setUpiId] = useState(user?.email ? `${user.email.split('@')[0]}@okhdfcbank` : '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const adjustedDeliveryFee = deliveryMethod === 'pickup' ? 0 : deliveryCharge;
-  const grandTotal = totalAmount + adjustedDeliveryFee;
+  const [deliveryDistanceKm, setDeliveryDistanceKm] = useState<number>(5);
 
-  const [isCalculating, setIsCalculating] = useState(false);
-  const [deliveryDistance, setDeliveryDistance] = useState(0);
+  // Recalculate distance whenever village or district changes
+  React.useEffect(() => {
+    let isMounted = true;
+    const updateDistance = async () => {
+      const destination = `${village || ''} ${district || ''}`.trim() || 'Guntur';
+      const origin = items[0]?.farmerVillage || 'Tenali';
+      const km = await deliveryService.calculateDistance(origin, destination);
+      if (isMounted) setDeliveryDistanceKm(km);
+    };
+    updateDistance();
+    return () => { isMounted = false; };
+  }, [village, district, items]);
+
+  // Delivery charge: ₹10 per km. Farm Pickup = ₹0.
+  const calculatedDeliveryFee = deliveryMethod === 'pickup' 
+    ? 0 
+    : deliveryService.calculateDeliveryCharge(deliveryDistanceKm, false, 10);
+  const grandTotal = totalAmount + calculatedDeliveryFee;
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,23 +76,15 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
     try {
       const orderNumber = `FC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      // 1. Calculate Delivery
-      let finalCharge = deliveryMethod === 'pickup' ? 0 : adjustedDeliveryFee;
-      if (deliveryMethod === 'farmer_delivery') {
-         // In a real app, call google maps API here
-         // For now, use the mock service
-         // finalCharge = await deliveryService.calculateDeliveryCharge(...)
-      }
-
       // Process payment
       await paymentService.processPayment({
         orderId: orderNumber,
-        amount: totalAmount + finalCharge,
+        amount: grandTotal,
         paymentMethod,
         upiId: paymentMethod === 'upi' ? upiId : undefined,
       });
 
-      // Group by farmer (Requirement 1: Correct Farmer Order Assignment)
+      // Group items strictly by farmerId
       const farmerOrders = items.reduce((acc: any, item) => {
         if (!acc[item.farmerId]) {
           acc[item.farmerId] = {
@@ -88,13 +97,25 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         return acc;
       }, {});
 
+      // Fetch authentic farmer profiles for each farmerId to avoid wrong farmer assignment
       for (const farmerId in farmerOrders) {
         const orderData = farmerOrders[farmerId];
         const firstItem = orderData.items[0];
         
+        let actualFarmer = await farmerService.getById(farmerId);
+        const farmerPhone = actualFarmer?.mobile || firstItem.farmerPhone || '+91 98480 12345';
+        const farmerVillage = actualFarmer?.village || firstItem.farmerVillage || 'Tenali';
+        const farmerName = actualFarmer?.fullName || firstItem.farmerName;
+
+        // Calculate farmer-specific delivery distance & fee (₹10/km, pickup = ₹0)
+        const farmerOrigin = `${farmerVillage} ${actualFarmer?.district || ''}`.trim();
+        const customerDest = `${village} ${district}`.trim();
+        const distKm = await deliveryService.calculateDistance(farmerOrigin, customerDest);
+        const splitDeliveryCharge = deliveryMethod === 'pickup' ? 0 : deliveryService.calculateDeliveryCharge(distKm, false, 10);
+
         const newOrder: Order = {
           id: `ord-${Date.now()}-${farmerId}`,
-          orderNumber: `${orderNumber}-${farmerId}`,
+          orderNumber: `${orderNumber}-${farmerId.slice(-4)}`,
           customerId: user?.id || 'cust-demo',
           customerName: fullName,
           customerPhone: phone,
@@ -110,16 +131,17 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
           },
           items: orderData.items,
           totalAmount: orderData.totalAmount,
-          deliveryCharge: finalCharge,
-          finalAmount: orderData.totalAmount + finalCharge,
+          deliveryCharge: splitDeliveryCharge,
+          deliveryDistanceKm: distKm,
+          finalAmount: orderData.totalAmount + splitDeliveryCharge,
           paymentMethod,
           paymentStatus: paymentMethod === 'cod' ? 'pending' : 'completed',
           status: 'placed',
           deliveryMethod,
           farmerId: farmerId,
-          farmerName: firstItem.farmerName,
-          farmerPhone: '+91 98480 12345', // Use a default or fetch from farmer profile
-          farmerVillage: 'Tenali Rural',
+          farmerName: farmerName,
+          farmerPhone: farmerPhone,
+          farmerVillage: farmerVillage,
           createdAt: new Date().toISOString(),
           estimatedDeliveryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // +2 days
         };
@@ -478,10 +500,17 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                   <span>{t('subtotal')}</span>
                   <span className="font-bold text-stone-900">₹{totalAmount}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>{t('deliveryCharge')}</span>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span>{t('deliveryCharge')}</span>
+                    {deliveryMethod !== 'pickup' && (
+                      <span className="text-[10px] text-stone-400 block font-normal">
+                        ({deliveryDistanceKm} KM × ₹10/km rate)
+                      </span>
+                    )}
+                  </div>
                   <span className="font-bold text-stone-900">
-                    {adjustedDeliveryFee === 0 ? 'FREE' : `₹${adjustedDeliveryFee}`}
+                    {calculatedDeliveryFee === 0 ? 'FREE (Farm Pickup)' : `₹${calculatedDeliveryFee}`}
                   </span>
                 </div>
                 <div className="pt-2 border-t border-stone-100 flex justify-between items-baseline text-base font-black text-stone-900">

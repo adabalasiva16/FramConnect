@@ -76,8 +76,9 @@ export const userService = {
       role: account.role,
       farmingExperience: account.farmingExperience,
       bio: account.bio || '',
-      isVerified: account.role === 'admin' || account.role === 'customer' ? true : (account.isVerified || false),
-      verificationStatus: account.role === 'admin' || account.role === 'customer' ? 'verified' : (account.verificationStatus || 'pending'),
+      isVerified: account.role === 'farmer' ? false : true,
+      verificationStatus: account.role === 'farmer' ? (account.verificationStatus || 'pending') : 'verified',
+      approvalStatus: account.role === 'farmer' ? (account.approvalStatus || 'pending') : 'approved',
       rejectionReason: account.rejectionReason || '',
       createdAt: new Date().toISOString(),
     };
@@ -271,15 +272,17 @@ export const userService = {
     return Array.from(userMap.values());
   },
 
-  async updateUserStatus(userId: string, status: 'verified' | 'rejected' | 'pending', adminUid?: string, reason?: string): Promise<void> {
-    const isVerified = status === 'verified';
+  async updateUserStatus(userId: string, status: 'verified' | 'approved' | 'rejected' | 'pending', adminUid?: string, reason?: string): Promise<void> {
+    const isApproved = status === 'verified' || status === 'approved';
+    const finalStatus = isApproved ? 'approved' : status;
     const updatePayload: any = {
-      isVerified,
-      verificationStatus: status,
+      isVerified: isApproved,
+      verificationStatus: isApproved ? 'approved' : finalStatus,
+      approvalStatus: isApproved ? 'approved' : finalStatus,
       rejectionReason: reason || '',
     };
 
-    if (isVerified) {
+    if (isApproved) {
       updatePayload.approvedAt = new Date().toISOString();
       updatePayload.approvedBy = adminUid || 'admin';
     } else if (status === 'rejected') {
@@ -303,7 +306,7 @@ export const userService = {
           }
         }
       } catch (err: any) {
-        console.warn('[Firebase] userService.updateUserStatus warning (falling back to local storage):', err);
+        console.error('[Firebase] userService.updateUserStatus error:', err);
       }
     }
 

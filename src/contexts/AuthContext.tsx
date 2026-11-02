@@ -346,7 +346,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: data.role || 'customer',
           farmingExperience: data.farmingExperience || (data.role === 'farmer' ? 5 : undefined),
           bio: data.bio || '',
-          isVerified: data.role === 'admin',
+          isVerified: data.role === 'admin' ? true : (data.role === 'customer' ? true : false),
+          verificationStatus: data.role === 'admin' ? 'verified' : (data.role === 'customer' ? 'verified' : 'pending'),
+          approvalStatus: data.role === 'farmer' ? 'pending' : 'approved',
           createdAt: new Date().toISOString(),
           passwordHash: data.password || '',
         };

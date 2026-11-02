@@ -205,18 +205,18 @@ export async function uploadProductImage(
       return await new Promise<string>((resolve) => {
         let isDone = false;
 
-        // Safety timer: if bucket is 404 or network hangs, smoothly resolve fallback in 3s
+        // Safety timer: allow up to 60s for high-res mobile uploads on slower connections
         const timer = setTimeout(async () => {
           if (!isDone) {
             isDone = true;
             try {
               uploadTask.cancel();
             } catch {}
-            console.warn('[Firebase Storage] Upload timed out/bucket 404, smoothly completing via optimized data URL.');
+            console.warn('[Firebase Storage] Upload timed out after 60s, smoothly completing via optimized data URL fallback.');
             const fallback = await getOptimizedFallbackUrl();
             resolve(fallback);
           }
-        }, 3000);
+        }, 60000);
 
         uploadTask.on(
           'state_changed',
@@ -315,10 +315,11 @@ export async function uploadProfilePicture(
             try {
               uploadTask.cancel();
             } catch {}
+            console.warn('[Firebase Storage] Profile image upload timed out after 60s, using fallback.');
             const fallback = await getOptimizedFallbackUrl();
             resolve(fallback);
           }
-        }, 3000);
+        }, 60000);
 
         uploadTask.on(
           'state_changed',
