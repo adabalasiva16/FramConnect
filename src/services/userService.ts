@@ -320,7 +320,7 @@ export const userService = {
 
     // 3. Update storage.ts tracked lists (like farmers list)
     const { setFarmerVerification } = await import('../lib/storage');
-    setFarmerVerification(userId, isVerified, status, reason);
+    setFarmerVerification(userId, isApproved, isApproved ? 'verified' : (status === 'rejected' ? 'rejected' : 'pending'), reason);
 
     window.dispatchEvent(new CustomEvent('farmconnect_storage_update', { detail: { key: 'status' } }));
   },
