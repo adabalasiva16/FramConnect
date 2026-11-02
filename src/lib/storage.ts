@@ -235,9 +235,15 @@ export const getStoredFarmers = (): UserProfile[] => {
   }
 };
 
-export const setFarmerVerification = (userId: string, isVerified: boolean, status?: 'pending' | 'verified' | 'rejected', reason?: string): void => {
-  const vStatus = status || (isVerified ? 'verified' : 'pending');
-  const updateFields = { isVerified, verificationStatus: vStatus, rejectionReason: reason || '' };
+export const setFarmerVerification = (userId: string, isVerified: boolean, status?: 'pending' | 'verified' | 'rejected' | 'approved', reason?: string): void => {
+  const isApproved = isVerified || status === 'verified' || status === 'approved';
+  const vStatus = isApproved ? 'approved' : (status === 'rejected' ? 'rejected' : 'pending');
+  const updateFields = {
+    isVerified: isApproved,
+    verificationStatus: vStatus,
+    approvalStatus: vStatus,
+    rejectionReason: reason || '',
+  };
 
   // 1. Update STORAGE_KEYS.FARMERS
   const currentFarmers = getStoredFarmers();

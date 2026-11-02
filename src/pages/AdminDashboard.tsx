@@ -31,6 +31,25 @@ import { getStoredReviews } from '../lib/storage';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { userService } from '../services/userService';
+import { db, isFirebaseConfigured } from '../lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+
+export const isFarmerApproved = (u: UserProfile): boolean => {
+  return Boolean(
+    u.approvalStatus === 'approved' ||
+    u.verificationStatus === 'approved' ||
+    u.verificationStatus === 'verified' ||
+    u.isVerified === true
+  );
+};
+
+export const isFarmerRejected = (u: UserProfile): boolean => {
+  return !isFarmerApproved(u) && (u.approvalStatus === 'rejected' || u.verificationStatus === 'rejected');
+};
+
+export const isFarmerPending = (u: UserProfile): boolean => {
+  return !isFarmerApproved(u) && !isFarmerRejected(u);
+};
 
 interface AdminDashboardProps {
   onOpenAuth?: (mode: 'login' | 'register', role?: UserRole) => void;
@@ -82,29 +101,55 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
 
   const handleApproveUser = async (u: UserProfile) => {
     console.log('[AdminDashboard] Approving farmer document ID:', u.id, 'Name:', u.fullName);
-    const currentStatus = u.verificationStatus || u.approvalStatus || (u.isVerified ? 'approved' : 'pending');
-    if (currentStatus === 'approved' || currentStatus === 'verified') {
+    if (isFarmerApproved(u)) {
       setActionSuccessMsg(`${u.fullName} is already approved.`);
       setTimeout(() => setActionSuccessMsg(''), 3000);
       return;
     }
-    if (u.role !== 'farmer') return; // Only approve farmers
+    if (u.role !== 'farmer') return;
+
+    const farmerId = u.id;
+    const adminUid = user?.id || 'admin';
+    const updatePayload = {
+      isVerified: true,
+      verificationStatus: 'approved' as const,
+      approvalStatus: 'approved' as const,
+      approvedAt: new Date().toISOString(),
+      approvedBy: adminUid,
+      rejectionReason: '',
+    };
 
     try {
-      // Update both farmers and users collections
-      await farmerService.approveFarmer(u.id, user?.id);
-      await userService.updateUserStatus(u.id, 'approved', user?.id);
-      console.log('[AdminDashboard] Farmer approved successfully:', u.id);
+      // 1. Direct write to Firestore users and farmers collections
+      if (isFirebaseConfigured()) {
+        try {
+          await setDoc(doc(db, 'users', farmerId), updatePayload, { merge: true });
+          console.log('[AdminDashboard] Firestore users/' + farmerId + ' updated to approved');
+        } catch (e) {
+          console.warn('[AdminDashboard] Firestore users/' + farmerId + ' write warning:', e);
+        }
+        try {
+          await setDoc(doc(db, 'farmers', farmerId), updatePayload, { merge: true });
+          console.log('[AdminDashboard] Firestore farmers/' + farmerId + ' updated to approved');
+        } catch (e) {
+          console.warn('[AdminDashboard] Firestore farmers/' + farmerId + ' write warning:', e);
+        }
+      }
 
-      // Instantly update local state
+      // 2. Persist in farmerService and userService
+      await farmerService.approveFarmer(farmerId, adminUid);
+      await userService.updateUserStatus(farmerId, 'approved', adminUid);
+
+      // 3. Immediately update local state in React so farmer instantly moves out of Pending
       setUsers((prevUsers) =>
         prevUsers.map((usr) =>
-          usr.id === u.id
+          usr.id === farmerId
             ? { ...usr, isVerified: true, verificationStatus: 'approved', approvalStatus: 'approved', rejectionReason: '' }
             : usr
         )
       );
-      if (selectedFarmer?.id === u.id) {
+
+      if (selectedFarmer?.id === farmerId) {
         setSelectedFarmer((prev) =>
           prev ? { ...prev, isVerified: true, verificationStatus: 'approved', approvalStatus: 'approved', rejectionReason: '' } : null
         );
@@ -117,9 +162,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
       );
       setTimeout(() => setActionSuccessMsg(''), 4000);
 
+      // 4. Re-fetch from source to confirm persistence
       await loadData();
     } catch (err: any) {
-      console.error('[AdminDashboard] Approval error for ID:', u.id, err);
+      console.error('[AdminDashboard] Approval error for ID:', farmerId, err);
       alert('Approval error: ' + (err?.message || String(err)));
     }
   };
@@ -133,21 +179,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
     e.preventDefault();
     if (!rejectModalFarmer) return;
     const finalReason = rejectionReasonInput.trim() || 'Land passbook / Identity details require correction.';
+    const farmerId = rejectModalFarmer.id;
+    const adminUid = user?.id || 'admin';
     try {
       if (rejectModalFarmer.role === 'farmer') {
-        await farmerService.rejectFarmer(rejectModalFarmer.id, finalReason, user?.id);
+        await farmerService.rejectFarmer(farmerId, finalReason, adminUid);
       }
-      await userService.updateUserStatus(rejectModalFarmer.id, 'rejected', user?.id, finalReason);
+      await userService.updateUserStatus(farmerId, 'rejected', adminUid, finalReason);
+      
+      setUsers((prevUsers) =>
+        prevUsers.map((usr) =>
+          usr.id === farmerId
+            ? { ...usr, isVerified: false, verificationStatus: 'rejected', approvalStatus: 'rejected', rejectionReason: finalReason }
+            : usr
+        )
+      );
+
       setActionSuccessMsg(
         language === 'te'
           ? `${rejectModalFarmer.fullName} ప్రొఫైల్ నిరాకరించబడింది.`
-          : `User ${rejectModalFarmer.fullName} profile marked as Rejected.`
+          : `Farmer ${rejectModalFarmer.fullName} profile marked as Rejected.`
       );
       setTimeout(() => setActionSuccessMsg(''), 4000);
       setRejectModalFarmer(null);
-      loadData();
-      if (selectedFarmer?.id === rejectModalFarmer.id) {
-        setSelectedFarmer((prev) => (prev ? { ...prev, isVerified: false, verificationStatus: 'rejected', rejectionReason: finalReason } : null));
+      await loadData();
+      if (selectedFarmer?.id === farmerId) {
+        setSelectedFarmer((prev) => (prev ? { ...prev, isVerified: false, verificationStatus: 'rejected', approvalStatus: 'rejected', rejectionReason: finalReason } : null));
       }
     } catch (err: any) {
       alert('Rejection error: ' + err.message);
@@ -164,23 +221,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
   const totalGMV = orders.reduce((sum, o) => sum + o.finalAmount, 0);
   // Only farmers need admin approval — customers are auto-approved
   const farmersOnly = users.filter((u) => u.role === 'farmer');
-  const pendingCount = farmersOnly.filter((u) => {
-    const vs = u.verificationStatus || (u.isVerified ? 'approved' : 'pending');
-    return vs === 'pending';
-  }).length;
-  const verifiedCount = farmersOnly.filter((u) => {
-    const vs = u.verificationStatus || (u.isVerified ? 'approved' : 'pending');
-    return vs === 'approved' || vs === 'verified';
-  }).length;
-  const rejectedCount = farmersOnly.filter((u) => {
-    const vs = u.verificationStatus || (u.isVerified ? 'approved' : 'pending');
-    return vs === 'rejected';
-  }).length;
+  const pendingCount = farmersOnly.filter(isFarmerPending).length;
+  const verifiedCount = farmersOnly.filter(isFarmerApproved).length;
+  const rejectedCount = farmersOnly.filter(isFarmerRejected).length;
 
-  // Filtered users list — ONLY farmers shown for approval actions
+  // Filtered farmers list — strictly categorizes by approval status
   const filteredUsers = farmersOnly.filter((u) => {
-    const vStatus = u.verificationStatus || (u.isVerified ? 'approved' : 'pending');
-    if (statusFilter !== 'all' && vStatus !== statusFilter && !(statusFilter === 'verified' && vStatus === 'approved')) return false;
+    if (statusFilter === 'pending' && !isFarmerPending(u)) return false;
+    if (statusFilter === 'verified' && !isFarmerApproved(u)) return false;
+    if (statusFilter === 'rejected' && !isFarmerRejected(u)) return false;
     if (farmerSearch.trim()) {
       const q = farmerSearch.toLowerCase().trim();
       const matchName = u.fullName.toLowerCase().includes(q);
@@ -437,8 +486,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
             ) : (
               <div className="space-y-3">
                 {filteredUsers.map((u) => {
-                  const vStatus = u.verificationStatus || u.approvalStatus || (u.isVerified ? 'approved' : 'pending');
-                  const isApproved = vStatus === 'approved' || vStatus === 'verified';
+                  const approved = isFarmerApproved(u);
+                  const rejected = isFarmerRejected(u);
+                  const pending = isFarmerPending(u);
                   return (
                     <div
                       key={u.id}
@@ -456,19 +506,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                             <span className={`text-[9px] uppercase font-black px-1.5 py-0.5 rounded ${u.role === 'farmer' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
                               {u.role}
                             </span>
-                            {isApproved && (
+                            {approved && (
                               <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-emerald-300">
                                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                                 Approved
                               </span>
                             )}
-                            {!isApproved && vStatus === 'pending' && (
+                            {pending && (
                               <span className="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-amber-300">
                                 <Clock className="w-3.5 h-3.5 text-amber-600" />
                                 Pending
                               </span>
                             )}
-                            {!isApproved && vStatus === 'rejected' && (
+                            {rejected && (
                               <span className="bg-rose-100 text-rose-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-rose-300">
                                 <XCircle className="w-3.5 h-3.5 text-rose-600" />
                                 Rejected
@@ -482,7 +532,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                           <p className="text-[11px] text-stone-400 mt-0.5">
                             ✉️ {u.email} • 📞 {u.mobile} {u.role === 'farmer' && `• Exp: ${u.farmingExperience || 10} yrs`}
                           </p>
-                          {vStatus === 'rejected' && u.rejectionReason && (
+                          {rejected && u.rejectionReason && (
                             <p className="text-[11px] text-rose-700 font-bold mt-1 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
                               Rejection Reason: {u.rejectionReason}
                             </p>
@@ -500,7 +550,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                           <span>Details</span>
                         </button>
 
-                        {vStatus !== 'approved' && vStatus !== 'verified' && (
+                        {!approved && (
                           <button
                             onClick={() => handleApproveUser(u)}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1 shadow-2xs"
@@ -510,7 +560,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                           </button>
                         )}
 
-                        {vStatus !== 'rejected' && (
+                        {!rejected && (
                           <button
                             onClick={() => handleOpenRejectModal(u)}
                             className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1 shadow-2xs"
@@ -658,11 +708,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                 <span className="text-[10px] uppercase font-bold text-stone-400 block">Current Verification Status</span>
                 <div className="flex items-center justify-between">
                   <span className="font-black text-sm uppercase tracking-wider">
-                    {selectedFarmer.verificationStatus || (selectedFarmer.isVerified ? 'verified' : 'pending')}
+                    {isFarmerApproved(selectedFarmer) ? 'APPROVED' : (isFarmerRejected(selectedFarmer) ? 'REJECTED' : 'PENDING')}
                   </span>
-                  {selectedFarmer.isVerified ? (
+                  {isFarmerApproved(selectedFarmer) ? (
                     <span className="bg-emerald-100 text-emerald-800 font-bold px-3 py-1 rounded-full text-xs">Verified Badge Active</span>
-                  ) : selectedFarmer.verificationStatus === 'rejected' ? (
+                  ) : isFarmerRejected(selectedFarmer) ? (
                     <span className="bg-rose-100 text-rose-800 font-bold px-3 py-1 rounded-full text-xs">Profile Rejected</span>
                   ) : (
                     <span className="bg-amber-100 text-amber-800 font-bold px-3 py-1 rounded-full text-xs">Pending Review</span>
@@ -677,7 +727,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
 
               {/* Modal Action Buttons */}
               <div className="pt-2 flex gap-3">
-                {selectedFarmer.verificationStatus !== 'verified' && selectedFarmer.verificationStatus !== 'approved' && !selectedFarmer.isVerified && (
+                {!isFarmerApproved(selectedFarmer) && (
                   <button
                     onClick={() => handleApproveUser(selectedFarmer)}
                     className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-md"
@@ -686,7 +736,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                     <span>Approve & Grant Badge</span>
                   </button>
                 )}
-                {selectedFarmer.verificationStatus !== 'rejected' && (
+                {!isFarmerRejected(selectedFarmer) && (
                   <button
                     onClick={() => {
                       const f = selectedFarmer;

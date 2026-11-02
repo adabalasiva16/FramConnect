@@ -49,9 +49,12 @@ export const farmerService = {
         const usersSnap = await getDocs(usersQ);
         usersSnap.forEach((d) => {
           const data = d.data() as UserProfile;
-          farmerMap.set(data.id, {
+          const docId = d.id;
+          farmerMap.set(docId, {
             ...data,
-            verificationStatus: data.verificationStatus || (data.isVerified ? 'verified' : 'pending'),
+            id: docId,
+            verificationStatus: data.verificationStatus || (data.isVerified ? 'approved' : 'pending'),
+            approvalStatus: data.approvalStatus || (data.isVerified ? 'approved' : 'pending'),
           });
         });
 
@@ -59,11 +62,14 @@ export const farmerService = {
         const farmersSnap = await getDocs(collection(db, 'farmers'));
         farmersSnap.forEach((d) => {
           const data = d.data() as UserProfile;
-          const existing = farmerMap.get(data.id);
-          farmerMap.set(data.id, {
+          const docId = d.id;
+          const existing = farmerMap.get(docId);
+          farmerMap.set(docId, {
             ...existing,
             ...data,
-            verificationStatus: data.verificationStatus || (data.isVerified ? 'verified' : 'pending'),
+            id: docId,
+            verificationStatus: data.verificationStatus || (data.isVerified ? 'approved' : 'pending'),
+            approvalStatus: data.approvalStatus || (data.isVerified ? 'approved' : 'pending'),
           });
         });
       } catch (err) {

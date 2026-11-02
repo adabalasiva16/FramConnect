@@ -262,7 +262,8 @@ export const userService = {
         const snap = await getDocs(collection(db, 'users'));
         snap.forEach((d) => {
           const { password: _, ...profile } = d.data() as any;
-          userMap.set(profile.id, profile as UserProfile);
+          const docId = d.id;
+          userMap.set(docId, { ...profile, id: docId } as UserProfile);
         });
       } catch (err) {
         console.warn('[Firebase] userService.getAll error:', err);
@@ -316,6 +317,12 @@ export const userService = {
     if (idx >= 0) {
       localUsers[idx] = { ...localUsers[idx], ...updatePayload };
       localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(localUsers));
+    } else {
+      const fetchedUser = await this.getUserById(userId);
+      if (fetchedUser) {
+        localUsers.push({ ...fetchedUser, ...updatePayload });
+        localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(localUsers));
+      }
     }
 
     // 3. Update storage.ts tracked lists (like farmers list)
