@@ -1,0 +1,6 @@
+{
+  "name": "FarmConnect",
+  "description": "Connecting Farmers Directly to Consumers - Agricultural Marketplace with Live Market Prices, Bilingual Voice Assistant, and Direct Farm-to-Consumer Orders.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

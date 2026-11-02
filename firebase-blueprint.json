@@ -1,0 +1,206 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile for farmers, consumers, and administrators",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fullName": { "type": "string" },
+        "mobile": { "type": "string" },
+        "email": { "type": "string" },
+        "village": { "type": "string" },
+        "mandal": { "type": "string" },
+        "district": { "type": "string" },
+        "state": { "type": "string" },
+        "pincode": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "role": { "type": "string", "enum": ["farmer", "customer", "admin"] },
+        "farmingExperience": { "type": "number" },
+        "bio": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "verificationStatus": { "type": "string", "enum": ["pending", "verified", "rejected"] },
+        "rejectionReason": { "type": "string" },
+        "approvedAt": { "type": "string" },
+        "approvedBy": { "type": "string" },
+        "rejectedAt": { "type": "string" },
+        "rejectedBy": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "fullName", "email", "role"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Agricultural crop harvest listing by a farmer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "farmerId": { "type": "string" },
+        "farmerName": { "type": "string" },
+        "farmerVillage": { "type": "string" },
+        "farmerMandal": { "type": "string" },
+        "farmerDistrict": { "type": "string" },
+        "farmerState": { "type": "string" },
+        "farmerVerified": { "type": "boolean" },
+        "farmerPhone": { "type": "string" },
+        "name": { "type": "string" },
+        "teluguName": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "descriptionTe": { "type": "string" },
+        "pricePerKg": { "type": "number" },
+        "availableQtyKg": { "type": "number" },
+        "unit": { "type": "string" },
+        "harvestDate": { "type": "string" },
+        "location": { "type": "string" },
+        "isOrganic": { "type": "boolean" },
+        "deliveryOptions": { "type": "string" },
+        "images": { "type": "array" },
+        "status": { "type": "string" },
+        "rating": { "type": "number" },
+        "reviewCount": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "farmerId", "name", "pricePerKg", "availableQtyKg"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Direct farm purchase order placed by consumer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "deliveryAddress": { "type": "object" },
+        "items": { "type": "array" },
+        "totalAmount": { "type": "number" },
+        "deliveryCharge": { "type": "number" },
+        "finalAmount": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "paymentStatus": { "type": "string" },
+        "status": { "type": "string" },
+        "deliveryMethod": { "type": "string" },
+        "farmerId": { "type": "string" },
+        "farmerName": { "type": "string" },
+        "farmerPhone": { "type": "string" },
+        "farmerVillage": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "estimatedDeliveryDate": { "type": "string" },
+        "otpCode": { "type": "string" }
+      },
+      "required": ["id", "orderNumber", "customerId", "farmerId", "finalAmount", "status"]
+    },
+    "MarketPrice": {
+      "title": "MarketPrice",
+      "description": "Daily official AGMARKNET / e-NAM mandi benchmark price",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "cropName": { "type": "string" },
+        "cropTeluguName": { "type": "string" },
+        "marketName": { "type": "string" },
+        "district": { "type": "string" },
+        "state": { "type": "string" },
+        "minPrice": { "type": "number" },
+        "maxPrice": { "type": "number" },
+        "modalPrice": { "type": "number" },
+        "unit": { "type": "string" },
+        "trend": { "type": "string" },
+        "changePercent": { "type": "number" },
+        "marketDate": { "type": "string" },
+        "dataSource": { "type": "string" },
+        "lastUpdated": { "type": "string" }
+      },
+      "required": ["id", "cropName", "marketName", "modalPrice"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Customer feedback and star rating on farm produce",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "farmerId": { "type": "string" },
+        "farmerName": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerAvatar": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "productId", "farmerId", "rating", "comment"]
+    },
+    "DirectMessage": {
+      "title": "DirectMessage",
+      "description": "Direct chat message between farmer and consumer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "conversationId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderRole": { "type": "string" },
+        "recipientId": { "type": "string" },
+        "recipientName": { "type": "string" },
+        "productName": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "senderId", "recipientId", "content"]
+    },
+    "NotificationItem": {
+      "title": "NotificationItem",
+      "description": "In-app notifications for orders, status, and alerts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "targetRole": { "type": "string" },
+        "title": { "type": "string" },
+        "titleTe": { "type": "string" },
+        "message": { "type": "string" },
+        "messageTe": { "type": "string" },
+        "type": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "linkUrl": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "message"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile records"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Agricultural crop harvest listings"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Farm-direct customer purchase orders"
+    },
+    "/market_prices/{priceId}": {
+      "schema": "MarketPrice",
+      "description": "Mandi benchmark market prices"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Product quality and farmer reviews"
+    },
+    "/messages/{messageId}": {
+      "schema": "DirectMessage",
+      "description": "Farmer-consumer direct inquiries"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "NotificationItem",
+      "description": "In-app alert notifications"
+    }
+  }
+}

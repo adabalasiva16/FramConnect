@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper Functions
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    
+    // Admin check: Needs lookup in a trusted collection
+    function isAdmin() { 
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); 
+    }
+
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // Master Gate (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // User Profiles - Split PII
+    match /users/{userId} {
+      match /public/{docId} {
+        allow read: if isSignedIn();
+        allow write: if isOwner(userId);
+      }
+      match /private/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Farmers directory
+    match /farmers/{farmerId} {
+      allow read: if true;
+      allow write: if isOwner(farmerId) || isAdmin();
+    }
+
+    // Products
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource.data.farmerId == request.auth.uid;
+    }
+
+    // Orders
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (resource.data.customerId == request.auth.uid || resource.data.farmerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        (request.resource.data.farmerId == request.auth.uid && resource.data.farmerId == request.auth.uid) || 
+        isAdmin()
+      );
+    }
+    
+    // Settings (Admin Only)
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

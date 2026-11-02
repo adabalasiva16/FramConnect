@@ -1,0 +1,1275 @@
+# FARMCONNECT – COMPLETE FULL-STACK AGRICULTURAL MARKETPLACE
+## GOOGLE AI STUDIO – ULTIMATE MASTER DEVELOPMENT PROMPT
+
+Act as a senior full-stack software architect, professional UI/UX designer, React developer, backend engineer, database architect, AI integration specialist, and agricultural technology expert.
+
+Your task is to design, develop, implement, test, and prepare a complete, production-quality, responsive full-stack web application named FARMCONNECT.
+
+IMPORTANT: Build a real, fully functional application, not just a static website, landing page, frontend prototype, or visual demonstration.
+
+Implement every feature described in this specification.
+
+==================================================
+1. PROJECT IDENTITY
+==================================================
+
+PROJECT NAME: FarmConnect
+
+TAGLINE: Connecting Farmers Directly to Consumers.
+
+PROJECT CATEGORY: Agricultural Technology / AgriTech / Digital Marketplace.
+
+PROJECT OBJECTIVE:
+
+FarmConnect is an innovative digital platform that connects farmers directly with consumers without unnecessary intermediaries.
+
+The main purpose is to help farmers sell agricultural products directly to consumers, receive fair prices, increase their income, and reach a wider customer base.
+
+Consumers can purchase fresh agricultural products directly from farmers at reasonable prices.
+
+The platform also addresses transportation difficulties, limited digital knowledge, language barriers, lack of market information, and difficulty accessing customers.
+
+Create a simple, accessible, farmer-friendly digital platform that works for people with limited smartphone knowledge.
+
+==================================================
+2. PROBLEMS TO SOLVE
+==================================================
+
+Address these real-world agricultural problems:
+
+1. Farmers do not receive fair prices for their products.
+2. Unnecessary intermediaries reduce farmers' profits.
+3. Farmers struggle to connect directly with consumers.
+4. Transportation and delivery create difficulties.
+5. Many farmers have limited digital knowledge.
+6. Farmers lack easy access to updated market prices.
+7. Consumers struggle to find fresh products at reasonable prices.
+8. Farmers lack convenient digital selling platforms.
+
+FarmConnect must provide practical digital solutions for all these problems.
+
+==================================================
+3. COMPLETE TECHNOLOGY STACK
+==================================================
+
+FRONTEND:
+- React.js.
+- TypeScript.
+- Vite.
+- Tailwind CSS.
+- Lucide React.
+- Responsive reusable components.
+
+DEVELOPMENT:
+- Google AI Studio Build mode.
+- Gemini-assisted application development.
+
+BACKEND:
+- Supabase.
+- Supabase Edge Functions.
+- Secure Node.js server-side functionality where required.
+- REST API integrations.
+
+DATABASE:
+- Supabase PostgreSQL.
+
+AUTHENTICATION:
+- Supabase Authentication.
+
+STORAGE:
+- Supabase Storage.
+
+AI:
+- Google Gemini API.
+
+VOICE:
+- Web Speech API.
+- Speech Recognition.
+- Speech Synthesis.
+
+DEPLOYMENT:
+- Firebase Hosting for the React frontend.
+
+ADDITIONAL INTEGRATIONS:
+- Agricultural market price APIs.
+- Maps and location services.
+- Razorpay.
+- Email and notification services.
+
+IMPORTANT ARCHITECTURE:
+
+Firebase Hosting must serve the frontend application.
+
+Supabase must provide authentication, PostgreSQL database, and storage.
+
+Supabase Edge Functions must handle secure Gemini requests and external API integrations where appropriate.
+
+Never expose secret API keys in browser code.
+
+==================================================
+4. USER ROLES AND AUTHENTICATION
+==================================================
+
+Create three user roles:
+
+1. Farmer.
+2. Customer.
+3. Administrator.
+
+Registration fields:
+- Full name.
+- Mobile number.
+- Email address.
+- Password.
+- Village.
+- Mandal.
+- District.
+- State.
+- PIN code.
+- Profile photograph.
+- User role.
+
+Implement:
+- Registration.
+- Login.
+- Logout.
+- Forgot password.
+- Password reset.
+- Session management.
+- Protected routes.
+- Role-based access.
+- Profile management.
+
+After login:
+- Farmer goes to Farmer Dashboard.
+- Customer goes to Customer Dashboard.
+- Administrator goes to Admin Dashboard.
+
+Use Supabase Authentication.
+
+Implement secure role verification and Row Level Security.
+
+==================================================
+5. FARMER DASHBOARD
+==================================================
+
+Build a complete farmer dashboard.
+
+Dashboard statistics:
+- Total products.
+- Available products.
+- Total orders.
+- Pending orders.
+- Completed orders.
+- Total earnings.
+- Monthly earnings.
+- Customer enquiries.
+
+PRODUCT MANAGEMENT:
+
+Allow farmers to:
+- Add new agricultural products.
+- Upload multiple product photographs.
+- Enter product name.
+- Select category.
+- Enter product description.
+- Set price per kilogram.
+- Enter available quantity.
+- Enter harvest date.
+- Specify farming location.
+- Select organic or conventional.
+- Select delivery or pickup.
+- Edit products.
+- Delete products.
+- Update product prices.
+- Update stock availability.
+- Mark products unavailable.
+
+ORDER MANAGEMENT:
+
+- View incoming orders.
+- Accept orders.
+- Reject orders.
+- View order details.
+- Update order status.
+- View customer information needed for fulfilment.
+- View order history.
+- Contact customers.
+
+SALES MANAGEMENT:
+
+- Daily earnings.
+- Weekly earnings.
+- Monthly earnings.
+- Total sales.
+- Product-wise sales.
+- Earnings charts.
+- Transaction history.
+
+FARMER PROFILE:
+
+- Name.
+- Photograph.
+- Village.
+- District.
+- Farming experience.
+- Available products.
+- Contact preferences.
+- Verification status.
+
+==================================================
+6. CUSTOMER DASHBOARD
+==================================================
+
+Build a complete customer dashboard.
+
+Include:
+- Welcome section.
+- Product search.
+- Featured products.
+- Product categories.
+- Nearby farmers.
+- Popular products.
+- Market price updates.
+- Shopping cart.
+- Favourite products.
+- Favourite farmers.
+- Recent orders.
+- Order tracking.
+- Previous purchases.
+- Customer reviews.
+- Profile settings.
+
+Make the experience similar to a modern agricultural e-commerce platform.
+
+==================================================
+7. AGRICULTURAL MARKETPLACE
+==================================================
+
+Create a complete digital marketplace.
+
+PRODUCT CATEGORIES:
+
+1. Vegetables.
+2. Fruits.
+3. Rice and grains.
+4. Pulses.
+5. Spices.
+6. Dairy products.
+7. Organic products.
+8. Other agricultural products.
+
+PRODUCT CARDS:
+
+Every product card must show:
+- Product image.
+- Product name.
+- Price.
+- Price unit.
+- Available quantity.
+- Farmer name.
+- Farmer location.
+- Harvest information.
+- Description.
+- Availability.
+- Verified farmer indicator, if verified.
+- View Details button.
+- Add to Cart button.
+
+SEARCH:
+- Product name.
+- Category.
+- Farmer name.
+- Village.
+- District.
+
+FILTERS:
+- Category.
+- Minimum price.
+- Maximum price.
+- Location.
+- Availability.
+- Organic products.
+
+SORTING:
+- Lowest price.
+- Highest price.
+- Recently added.
+- Popular products.
+
+PRICE COMPARISON:
+
+Allow customers to compare the same agricultural product from different farmers.
+
+Display prices, farmer names, locations, and available quantities.
+
+==================================================
+8. LIVE AGRICULTURAL MARKET PRICE SYSTEM
+==================================================
+
+Create a dedicated agricultural market price dashboard.
+
+Integrate available official and authorized agricultural data sources:
+
+- AGMARKNET.
+- e-NAM.
+- Government agricultural market datasets.
+- Other reliable agricultural market APIs.
+
+DISPLAY:
+- Crop name.
+- Market name.
+- District.
+- State.
+- Minimum price.
+- Maximum price.
+- Modal price.
+- Measurement unit.
+- Market date.
+- Data source.
+- Last updated timestamp.
+
+SUPPORT CROPS:
+- Tomato.
+- Onion.
+- Potato.
+- Rice.
+- Paddy.
+- Chilli.
+- Cotton.
+- Maize.
+- Groundnut.
+- Banana.
+- Mango.
+- Other agricultural crops.
+
+FUNCTIONALITY:
+- Crop search.
+- State filter.
+- District filter.
+- Market filter.
+- Date filter.
+- Price comparison.
+- Historical price charts.
+- Market trends.
+
+Provide English and Telugu support.
+
+IMPORTANT:
+Never fabricate current market prices.
+Never present sample data as live information.
+Clearly distinguish verified live data, sample data, and unavailable data.
+Display source and update timestamps.
+Handle API failures gracefully.
+
+==================================================
+9. COMPLETE ENGLISH AND TELUGU LANGUAGE SUPPORT
+==================================================
+
+Create a complete bilingual application.
+
+SUPPORTED LANGUAGES:
+- English.
+- Telugu (తెలుగు).
+
+Add a language switcher in the navigation bar.
+
+Translate every page:
+
+- Homepage.
+- Navigation.
+- Login.
+- Registration.
+- Farmer dashboard.
+- Customer dashboard.
+- Admin dashboard.
+- Marketplace.
+- Product details.
+- Product forms.
+- Market prices.
+- Cart.
+- Checkout.
+- Orders.
+- Delivery.
+- Notifications.
+- Messages.
+- Profile.
+- Help centre.
+- Error messages.
+
+Use natural, simple Telugu that farmers can understand.
+
+Examples:
+
+Home – హోమ్.
+Marketplace – మార్కెట్.
+Add Product – ఉత్పత్తిని జోడించండి.
+My Orders – నా ఆర్డర్లు.
+Market Prices – మార్కెట్ ధరలు.
+My Products – నా ఉత్పత్తులు.
+Available Stock – అందుబాటులో ఉన్న నిల్వ.
+Total Earnings – మొత్తం ఆదాయం.
+Order Tracking – ఆర్డర్ వివరాలు.
+
+Use a centralized translation system.
+
+Remember the selected language between pages and login sessions.
+
+Use Telugu-compatible fonts and verify correct rendering.
+
+==================================================
+10. ADVANCED TELUGU AND ENGLISH VOICE ASSISTANT
+==================================================
+
+Develop an advanced bilingual voice assistant.
+
+Use:
+- Web Speech API.
+- Speech Recognition.
+- Speech Synthesis.
+- Google Gemini for natural-language command interpretation where appropriate.
+
+LANGUAGE CODES:
+- Telugu: te-IN.
+- English: en-IN.
+
+VOICE INTERFACE:
+- Microphone button.
+- Listening animation.
+- Recognized speech display.
+- Spoken response.
+- Start and stop controls.
+- Language selection.
+- Error messages.
+
+FARMER VOICE COMMANDS:
+
+Telugu:
+- కొత్త పంటను జోడించు.
+- నా ఆర్డర్లు చూపించు.
+- టమాటా ధర ఎంత?
+- నా ఉత్పత్తుల ధర మార్చు.
+- నా అమ్మకాల వివరాలు చూపించు.
+- నా దగ్గర ఉన్న పంటల వివరాలు చూపించు.
+- కొత్త ఉత్పత్తిని అప్లోడ్ చేయి.
+
+English:
+- Add a new product.
+- Show my orders.
+- What is today's tomato price?
+- Update my product price.
+- Show my sales report.
+- Show my available stock.
+
+CUSTOMER VOICE COMMANDS:
+
+Telugu:
+- టమాటాలు వెతుకు.
+- దగ్గరలో ఉన్న రైతులను చూపించు.
+- బియ్యం ఉత్పత్తులను చూపించు.
+- నా ఆర్డర్ వివరాలు చూపించు.
+- నేటి మార్కెట్ ధరలు చూపించు.
+
+English:
+- Search for tomatoes.
+- Find nearby farmers.
+- Show rice products.
+- Add rice to cart.
+- Track my order.
+- Show today's market prices.
+
+VOICE ASSISTANT BEHAVIOUR:
+
+1. Recognize spoken language.
+2. Convert speech to text.
+3. Interpret the requested command.
+4. Navigate to the correct page.
+5. Search the actual database.
+6. Execute authorized actions.
+7. Display the result.
+8. Read the result aloud.
+
+Ask for confirmation before:
+- Placing orders.
+- Making payments.
+- Deleting products.
+- Performing sensitive operations.
+
+Do not simulate voice commands with fixed sample responses.
+
+Provide manual navigation as an alternative.
+
+If browser speech recognition is unsupported, display a clear fallback.
+
+==================================================
+11. TRANSPORTATION AND DELIVERY MANAGEMENT
+==================================================
+
+Create a dedicated transportation coordination module.
+
+Solve transportation problems faced by farmers.
+
+FEATURES:
+- Farmer delivery preferences.
+- Customer pickup.
+- Delivery address.
+- Delivery availability.
+- Local delivery partners.
+- Collection centres.
+- Estimated delivery time.
+- Delivery contact information.
+- Order status.
+
+Allow farmers to choose:
+1. Customer pickup.
+2. Farmer-arranged delivery.
+3. Local delivery partner.
+
+Allow customers to choose available delivery options.
+
+ORDER STATUSES:
+- Order Placed.
+- Order Accepted.
+- Preparing.
+- Ready for Pickup.
+- Shipped.
+- Delivered.
+- Cancelled.
+
+Add a map interface when an actual maps integration is configured.
+
+Do not fabricate real-time vehicle tracking.
+
+==================================================
+12. SHOPPING CART AND CHECKOUT
+==================================================
+
+Build a fully functional shopping cart.
+
+FEATURES:
+- Add products.
+- Remove products.
+- Increase quantity.
+- Decrease quantity.
+- Validate stock.
+- Calculate subtotal.
+- Calculate delivery charges.
+- Calculate final amount.
+
+CHECKOUT:
+- Customer name.
+- Mobile number.
+- Delivery address.
+- Village.
+- District.
+- PIN code.
+- Delivery method.
+- Payment method.
+- Order summary.
+- Final total.
+
+PAYMENT METHODS:
+- UPI.
+- Debit cards.
+- Credit cards.
+- Cash on Delivery.
+
+Integrate Razorpay through secure server-side APIs when credentials are configured.
+
+Provide development test mode.
+
+Never expose payment secrets.
+Never store raw card information.
+
+==================================================
+13. ORDER MANAGEMENT
+==================================================
+
+Implement a complete order management workflow.
+
+When a customer places an order:
+
+1. Validate product availability.
+2. Validate stock.
+3. Create an order record.
+4. Create order item records.
+5. Save delivery information.
+6. Process payment or selected payment method.
+7. Notify the farmer.
+8. Display the order in the farmer dashboard.
+9. Allow acceptance or rejection.
+10. Allow preparation updates.
+11. Update delivery status.
+12. Notify customer.
+13. Mark the order delivered.
+14. Maintain order history.
+
+Use secure database transactions or server-side stock validation to prevent overselling.
+
+==================================================
+14. NOTIFICATIONS
+==================================================
+
+FARMER NOTIFICATIONS:
+- New order.
+- Order cancellation.
+- Customer enquiry.
+- Stock warning.
+- Payment confirmation.
+
+CUSTOMER NOTIFICATIONS:
+- Order confirmation.
+- Farmer acceptance.
+- Order preparation.
+- Shipment.
+- Delivery.
+- Payment status.
+
+Create an in-app notification centre.
+
+==================================================
+15. MESSAGING AND COMMUNICATION
+==================================================
+
+Create a farmer and customer communication system.
+
+Include:
+- Customer-to-farmer messages.
+- Farmer responses.
+- Product-related enquiries.
+- Message history.
+- Privacy-aware contact information.
+- Notifications for new messages.
+
+Store messages securely in Supabase.
+
+==================================================
+16. FARMER VERIFICATION AND TRUST
+==================================================
+
+Create a farmer verification system.
+
+Include:
+- Farmer profile.
+- Location.
+- Verification status.
+- Farming details.
+- Product listing history.
+- Customer reviews.
+- Ratings.
+
+Allow administrators to verify farmers after appropriate checks.
+
+Only verified farmers may display a verified badge.
+
+==================================================
+17. REVIEWS AND RATINGS
+==================================================
+
+Allow customers with eligible completed orders to provide:
+
+- Star ratings.
+- Written reviews.
+- Product quality feedback.
+- Delivery feedback.
+- Farmer service feedback.
+
+Allow administrators to moderate inappropriate reviews.
+
+==================================================
+18. ADMINISTRATOR DASHBOARD
+==================================================
+
+Build a professional admin panel.
+
+DISPLAY:
+- Total farmers.
+- Total customers.
+- Total products.
+- Total orders.
+- Completed orders.
+- Cancelled orders.
+- Revenue statistics.
+- Popular products.
+- Platform activity.
+
+ADMIN FEATURES:
+- Manage farmers.
+- Verify farmer accounts.
+- Manage customers.
+- Manage products.
+- Manage categories.
+- Monitor orders.
+- Manage reported listings.
+- Review feedback.
+- Manage support requests.
+- View transactions.
+- View analytics.
+- Generate reports.
+
+Secure all administrator functionality using server-side role verification and database policies.
+
+Never grant admin access based only on a user-editable frontend field.
+
+==================================================
+19. HOMEPAGE AND WEBSITE DESIGN
+==================================================
+
+Create a premium agricultural technology startup website.
+
+DESIGN STYLE:
+- Modern AgriTech startup.
+- Professional e-commerce marketplace.
+- Green and white theme.
+- Nature-inspired visual design.
+- Clean typography.
+- Premium agricultural photography.
+- Rounded product cards.
+- Smooth animations.
+- Professional icons.
+- Beautiful charts.
+
+NAVIGATION:
+- FarmConnect logo.
+- Home.
+- Marketplace.
+- Market Prices.
+- How It Works.
+- About Us.
+- Contact.
+- Language selector.
+- Login.
+- Register.
+
+HERO SECTION:
+
+Main heading:
+"From Farmers to Your Home – Directly!"
+
+Description:
+"Empowering farmers with fair prices and connecting consumers with fresh agricultural products."
+
+Buttons:
+- Explore Products.
+- Join as Farmer.
+
+HOMEPAGE SECTIONS:
+
+1. Hero banner.
+2. Featured products.
+3. Product categories.
+4. Today's market prices.
+5. How FarmConnect works.
+6. Benefits for farmers.
+7. Benefits for consumers.
+8. Nearby farmers.
+9. Farmer success stories.
+10. Customer testimonials.
+11. Frequently asked questions.
+12. Contact section.
+13. Footer.
+
+Use professional agricultural images and consistent design throughout.
+
+==================================================
+20. HOW FARMCONNECT WORKS
+==================================================
+
+FARMER WORKFLOW:
+
+Step 1: Register on FarmConnect.
+Step 2: Upload agricultural products.
+Step 3: Receive customer orders.
+Step 4: Sell directly to consumers.
+
+CUSTOMER WORKFLOW:
+
+Step 1: Register on FarmConnect.
+Step 2: Explore fresh products.
+Step 3: Select and place an order.
+Step 4: Receive fresh agricultural products.
+
+Create attractive illustrations for both workflows.
+
+==================================================
+21. ABOUT US AND CONTACT
+==================================================
+
+Create a professional About Us page.
+
+Explain:
+- Project objective.
+- Agricultural problems.
+- FarmConnect solutions.
+- Farmer benefits.
+- Consumer benefits.
+- Technology used.
+
+CONTACT PAGE:
+
+Include:
+- Contact form.
+- Name.
+- Email.
+- Mobile number.
+- Subject.
+- Message.
+- Submit button.
+
+Also include:
+- Help centre.
+- FAQs.
+- Farmer support.
+- Customer support.
+- Feedback system.
+
+==================================================
+22. DATABASE DESIGN
+==================================================
+
+Create complete Supabase PostgreSQL migrations.
+
+TABLES:
+
+1. profiles.
+2. farmers.
+3. customers.
+4. categories.
+5. products.
+6. product_images.
+7. orders.
+8. order_items.
+9. payments.
+10. delivery_details.
+11. delivery_partners.
+12. collection_centres.
+13. market_prices.
+14. reviews.
+15. messages.
+16. notifications.
+17. favourites.
+18. support_requests.
+19. farmer_verification.
+20. audit_logs.
+
+DATABASE REQUIREMENTS:
+
+- UUID primary keys.
+- Foreign keys.
+- Relationships.
+- Timestamps.
+- Constraints.
+- Indexes.
+- Data validation.
+- Database migrations.
+- Secure database policies.
+- Row Level Security.
+
+Connect profiles with Supabase Auth users.
+
+Implement role-based database permissions.
+
+Farmers can only manage their own products.
+
+Customers can only access their own private orders.
+
+Administrators can access authorized administrative functions.
+
+Prevent unauthorized stock changes, payment changes, and order manipulation.
+
+==================================================
+23. SUPABASE INTEGRATION
+==================================================
+
+Use @supabase/supabase-js.
+
+Create:
+
+src/lib/supabase.ts
+src/contexts/AuthContext.tsx
+src/services/productService.ts
+src/services/orderService.ts
+src/services/farmerService.ts
+src/services/marketPriceService.ts
+src/services/paymentService.ts
+src/services/notificationService.ts
+
+Configure:
+
+VITE_SUPABASE_URL
+VITE_SUPABASE_PUBLISHABLE_KEY
+
+Use secure environment variables.
+
+Implement:
+- Authentication.
+- Database access.
+- Storage.
+- Reusable queries.
+- Session handling.
+- Error handling.
+- Protected routes.
+
+Never expose the Supabase service_role key in frontend code.
+
+==================================================
+24. GOOGLE GEMINI AI INTEGRATION
+==================================================
+
+Create an AI-powered agricultural assistant.
+
+Use Gemini through secure server-side integration.
+
+Deploy the AI assistant using a Supabase Edge Function named farmconnect-assistant.
+
+Use GEMINI_API_KEY as a server-side secret.
+
+AI FEATURES:
+
+- Understand Telugu questions.
+- Understand English questions.
+- Help farmers navigate FarmConnect.
+- Explain product management.
+- Help customers search products.
+- Explain market price information.
+- Explain order status.
+- Interpret voice commands.
+- Provide general agricultural guidance.
+
+Use actual authorized database information when answering questions about products, orders, or market prices.
+
+Do not invent agricultural prices.
+
+Do not allow AI to modify sensitive records without authenticated permissions and explicit confirmation.
+
+Add appropriate error handling and request limits.
+
+==================================================
+25. SUPABASE STORAGE
+==================================================
+
+Configure Supabase Storage.
+
+Create:
+- product-images bucket.
+- profile-images bucket.
+
+Allow authorized farmers to upload and manage their own product images.
+
+Allow public viewing of approved product images.
+
+Keep private documents private.
+
+Validate:
+- File type.
+- File size.
+- User authorization.
+
+Store file paths in database records.
+
+==================================================
+26. LOCATION AND SEARCH
+==================================================
+
+Implement:
+- Product search.
+- Farmer search.
+- Village search.
+- District search.
+- State search.
+- Nearby farmers.
+- Location filters.
+
+Use browser location permissions only with user consent.
+
+Allow manual location selection.
+
+Use maps services when API credentials are configured.
+
+Do not expose unnecessary personal location details.
+
+==================================================
+27. SECURITY AND PRIVACY
+==================================================
+
+Implement:
+
+- Secure authentication.
+- Protected routes.
+- Role-based authorization.
+- Supabase Row Level Security.
+- Input validation.
+- Secure file uploads.
+- API validation.
+- Payment verification.
+- Secure environment variables.
+- Server-side secrets.
+- Rate limiting.
+- Privacy-aware contact details.
+- Error handling.
+- Audit logs for important operations.
+
+Never expose private API credentials in frontend code.
+
+==================================================
+28. RESPONSIVE DESIGN AND ACCESSIBILITY
+==================================================
+
+The application must work on:
+
+- Android phones.
+- iPhones.
+- Tablets.
+- Laptops.
+- Desktop computers.
+
+Implement:
+- Responsive navigation.
+- Mobile-friendly dashboards.
+- Touch-friendly buttons.
+- Large microphone button.
+- Readable fonts.
+- Clear form labels.
+- Accessible colour contrast.
+- Loading states.
+- Empty states.
+- Error messages.
+
+Optimize for farmers with limited digital experience and slower internet connections.
+
+==================================================
+29. SAMPLE DATA AND DEMONSTRATION MODE
+==================================================
+
+Create clearly labelled sample demonstration records.
+
+Sample farmers:
+- Farmer profiles.
+- Example locations.
+- Agricultural product listings.
+
+Sample products:
+- Tomatoes.
+- Onions.
+- Potatoes.
+- Rice.
+- Chilli.
+- Mangoes.
+- Bananas.
+- Groundnuts.
+
+Never mix demonstration prices with verified live market prices.
+
+Create a development demo mode.
+
+Never create fake administrator privileges or insecure sample credentials in production.
+
+==================================================
+30. APPLICATION PERFORMANCE
+==================================================
+
+Optimize:
+
+- Images.
+- Page loading.
+- Database queries.
+- API requests.
+- Search performance.
+- Mobile rendering.
+- Responsive layouts.
+
+Use:
+- Pagination.
+- Lazy loading.
+- Reusable components.
+- Efficient queries.
+- Caching where appropriate.
+
+Add proper loading indicators, error handling, and empty states.
+
+==================================================
+31. FIREBASE HOSTING DEPLOYMENT
+==================================================
+
+Prepare the React frontend for Firebase Hosting.
+
+Use:
+
+npm run build
+
+Configure Firebase Hosting with the correct production output directory.
+
+For a Vite application, use dist.
+
+Configure single-page application routing.
+
+Provide:
+- Firebase project configuration.
+- firebase.json.
+- .firebaserc where appropriate.
+- Deployment instructions.
+
+Support deployment commands:
+
+npm install -g firebase-tools
+
+firebase login
+
+firebase init hosting
+
+npm install
+
+npm run build
+
+firebase deploy --only hosting
+
+IMPORTANT:
+
+Firebase Hosting serves the React frontend.
+
+Supabase remains the backend.
+
+Supabase Edge Functions provide secure server-side AI and external API integrations.
+
+Do not assume Firebase static Hosting automatically deploys a separate Node.js backend.
+
+Prepare secure production environment configuration.
+
+==================================================
+32. COMPLETE TESTING
+==================================================
+
+Perform end-to-end testing.
+
+Test:
+
+1. Farmer registration.
+2. Customer registration.
+3. Login and logout.
+4. Role-based dashboards.
+5. Farmer product creation.
+6. Product image upload.
+7. Product editing.
+8. Product deletion.
+9. Customer product search.
+10. Product comparison.
+11. Shopping cart.
+12. Checkout.
+13. Order placement.
+14. Farmer order acceptance.
+15. Stock management.
+16. Payment workflow.
+17. Order tracking.
+18. Delivery coordination.
+19. Telugu translation.
+20. English translation.
+21. Telugu voice commands.
+22. English voice commands.
+23. Gemini integration.
+24. Market price API.
+25. Notifications.
+26. Messaging.
+27. Reviews.
+28. Admin management.
+29. Database security.
+30. Mobile responsiveness.
+
+Fix all errors and broken features.
+
+Do not remove working functionality when fixing problems.
+
+Do not claim that an integration works unless it has actually been tested.
+
+==================================================
+33. REQUIRED APPLICATION PAGES
+==================================================
+
+Create these pages:
+
+1. Home.
+2. Register.
+3. Login.
+4. Farmer Dashboard.
+5. Customer Dashboard.
+6. Admin Dashboard.
+7. Marketplace.
+8. Product Details.
+9. Add Product.
+10. Edit Product.
+11. Market Prices.
+12. Voice Assistant.
+13. Shopping Cart.
+14. Checkout.
+15. Order Tracking.
+16. Order History.
+17. Delivery Management.
+18. Farmer Profile.
+19. Customer Profile.
+20. Messages.
+21. Notifications.
+22. Reviews.
+23. About Us.
+24. Contact Us.
+25. Help Centre.
+26. Settings.
+
+Every page must have working navigation.
+
+==================================================
+34. STRICT FINAL DEVELOPMENT INSTRUCTIONS
+==================================================
+
+MOST IMPORTANT:
+
+Build the entire FarmConnect application.
+
+Do not stop after generating the homepage.
+
+Do not create only a frontend.
+
+Do not use decorative buttons that do nothing.
+
+Do not hardcode live agricultural market prices.
+
+Do not simulate real database operations.
+
+Do not expose secret API credentials.
+
+Do not skip any major feature.
+
+Every form must validate and save data.
+
+Every dashboard must retrieve actual database information.
+
+Every user role must have appropriate permissions.
+
+Every integration must have proper configuration.
+
+If credentials are unavailable, create the integration structure and clearly explain what must be configured.
+
+Implement all modules systematically.
+
+Preserve all existing working features.
+
+First establish the application architecture, database, authentication, and core workflows.
+
+Then implement and connect every remaining feature.
+
+Run the production build and fix all errors.
+
+Verify the complete farmer-to-consumer purchasing journey.
+
+FINAL DELIVERABLE:
+
+A complete, professional, secure, responsive, bilingual full-stack agricultural marketplace named FARMCONNECT.
+
+TECHNOLOGY:
+Google AI Studio + React + TypeScript + Supabase + Google Gemini + Firebase Hosting.
+
+LANGUAGES:
+English and Telugu.
+
+FINAL TAGLINE:
+CONNECTING FARMERS DIRECTLY TO CONSUMERS.
+
+THE APPLICATION MUST BE READY FOR REAL-WORLD TESTING AND DEPLOYMENT.
