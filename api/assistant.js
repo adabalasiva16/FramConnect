@@ -1,7 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
-let aiClient: GoogleGenAI | null = null;
+let aiClient = null;
 if (geminiApiKey && geminiApiKey !== 'MY_GEMINI_API_KEY') {
   aiClient = new GoogleGenAI({
     apiKey: geminiApiKey,
@@ -13,8 +13,8 @@ if (geminiApiKey && geminiApiKey !== 'MY_GEMINI_API_KEY') {
   });
 }
 
-function getSmartAgriculturalResponse(message: string, isTelugu: boolean, userRole: string) {
-  const q = message.toLowerCase();
+function getSmartAgriculturalResponse(message, isTelugu, userRole) {
+  const q = (message || '').toLowerCase();
 
   if (q.includes('?????') || q.includes('tomato') || q.includes('??') || q.includes('price') || q.includes('????')) {
     return {
@@ -85,7 +85,7 @@ function getSmartAgriculturalResponse(message: string, isTelugu: boolean, userRo
   };
 }
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
@@ -144,7 +144,7 @@ Return pure JSON:
       const fallback = getSmartAgriculturalResponse(message, isTelugu, userRole);
       return res.status(200).json(fallback);
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error in /api/assistant:', error);
     const isTelugu = req.body?.language === 'te';
     return res.status(200).json(getSmartAgriculturalResponse(req.body?.message || '', isTelugu, req.body?.userRole || 'customer'));
