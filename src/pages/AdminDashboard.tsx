@@ -32,7 +32,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { userService } from '../services/userService';
 import { db, isFirebaseConfigured } from '../lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 export const isFarmerApproved = (u: UserProfile): boolean => {
   return Boolean(
@@ -120,19 +120,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
     };
 
     try {
-      // 1. Direct write to Firestore users and farmers collections
+      // 1. Direct write to Firestore users and farmers collections (by ID and by Email)
       if (isFirebaseConfigured()) {
         try {
           await setDoc(doc(db, 'users', farmerId), updatePayload, { merge: true });
-          console.log('[AdminDashboard] Firestore users/' + farmerId + ' updated to approved');
         } catch (e) {
           console.warn('[AdminDashboard] Firestore users/' + farmerId + ' write warning:', e);
         }
         try {
           await setDoc(doc(db, 'farmers', farmerId), updatePayload, { merge: true });
-          console.log('[AdminDashboard] Firestore farmers/' + farmerId + ' updated to approved');
         } catch (e) {
           console.warn('[AdminDashboard] Firestore farmers/' + farmerId + ' write warning:', e);
+        }
+
+        // Also query by email just in case the Firestore document ID differs
+        if (u.email) {
+          try {
+            const cleanEmail = u.email.toLowerCase().trim();
+            const uq = query(collection(db, 'users'), where('email', '==', cleanEmail));
+            const uSnap = await getDocs(uq);
+            uSnap.forEach(async (dSnap) => {
+              await setDoc(doc(db, 'users', dSnap.id), updatePayload, { merge: true });
+            });
+            const fq = query(collection(db, 'farmers'), where('email', '==', cleanEmail));
+            const fSnap = await getDocs(fq);
+            fSnap.forEach(async (dSnap) => {
+              await setDoc(doc(db, 'farmers', dSnap.id), updatePayload, { merge: true });
+            });
+          } catch (e) {}
         }
       }
 
@@ -140,16 +155,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
       await farmerService.approveFarmer(farmerId, adminUid);
       await userService.updateUserStatus(farmerId, 'approved', adminUid);
 
-      // 3. Immediately update local state in React so farmer instantly moves out of Pending
+      // 3. Immediately update local state in React (matching by id and email)
       setUsers((prevUsers) =>
         prevUsers.map((usr) =>
-          usr.id === farmerId
+          usr.id === farmerId || (u.email && usr.email && usr.email.toLowerCase().trim() === u.email.toLowerCase().trim())
             ? { ...usr, isVerified: true, verificationStatus: 'approved', approvalStatus: 'approved', rejectionReason: '' }
             : usr
         )
       );
 
-      if (selectedFarmer?.id === farmerId) {
+      if (selectedFarmer && (selectedFarmer.id === farmerId || (u.email && selectedFarmer.email && selectedFarmer.email.toLowerCase().trim() === u.email.toLowerCase().trim()))) {
         setSelectedFarmer((prev) =>
           prev ? { ...prev, isVerified: true, verificationStatus: 'approved', approvalStatus: 'approved', rejectionReason: '' } : null
         );

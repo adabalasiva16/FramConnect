@@ -253,7 +253,8 @@ export const userService = {
     const local = getLocalRegisteredUsers();
     local.forEach((u) => {
       const { passwordHash: _, ...profile } = u;
-      userMap.set(profile.id, profile);
+      const key = (profile.email || profile.id).toLowerCase().trim();
+      userMap.set(key, profile);
     });
 
     // 2. Firestore users
@@ -263,7 +264,28 @@ export const userService = {
         snap.forEach((d) => {
           const { password: _, ...profile } = d.data() as any;
           const docId = d.id;
-          userMap.set(docId, { ...profile, id: docId } as UserProfile);
+          const key = (profile.email || docId).toLowerCase().trim();
+          const existing = userMap.get(key) || userMap.get(docId);
+
+          const isApproved =
+            profile.approvalStatus === 'approved' ||
+            profile.verificationStatus === 'approved' ||
+            profile.verificationStatus === 'verified' ||
+            profile.isVerified === true ||
+            existing?.approvalStatus === 'approved' ||
+            existing?.verificationStatus === 'approved' ||
+            existing?.verificationStatus === 'verified' ||
+            existing?.isVerified === true;
+
+          const merged: UserProfile = {
+            ...(existing || {}),
+            ...profile,
+            id: docId,
+            isVerified: isApproved,
+            verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || existing?.verificationStatus || 'pending'),
+            approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || existing?.approvalStatus || 'pending'),
+          };
+          userMap.set(key, merged);
         });
       } catch (err) {
         console.warn('[Firebase] userService.getAll error:', err);

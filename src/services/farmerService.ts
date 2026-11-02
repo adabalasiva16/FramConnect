@@ -131,7 +131,7 @@ export const farmerService = {
       }
     }
 
-    setLocalFarmerVerification(farmerId, true, 'verified');
+    setLocalFarmerVerification(farmerId, true, 'approved');
     window.dispatchEvent(new Event('farmconnect_storage_update'));
   },
 
