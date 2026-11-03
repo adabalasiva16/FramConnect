@@ -290,11 +290,12 @@ export const setFarmerVerification = (userId: string, isVerified: boolean, statu
     const sessionRaw = localStorage.getItem('farmconnect_active_session_v2');
     if (sessionRaw) {
       const activeUser = JSON.parse(sessionRaw);
-      if (activeUser && activeUser.id === userId) {
-        activeUser.isVerified = isVerified;
+      if (activeUser && (activeUser.id === userId || (activeUser.email && activeUser.email.toLowerCase().trim() === userId.toLowerCase().trim()))) {
+        activeUser.isVerified = isApproved;
         activeUser.verificationStatus = vStatus;
+        activeUser.approvalStatus = vStatus;
         if (reason) activeUser.rejectionReason = reason;
-        else if (isVerified) activeUser.rejectionReason = '';
+        else if (isApproved) activeUser.rejectionReason = '';
         localStorage.setItem('farmconnect_active_session_v2', JSON.stringify(activeUser));
       }
     }

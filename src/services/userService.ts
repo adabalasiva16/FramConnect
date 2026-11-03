@@ -231,17 +231,57 @@ export const userService = {
         if (snap.exists()) {
           const data = snap.data();
           const { password: _, ...profile } = data;
-          return profile as UserProfile;
+          const isApproved =
+            profile.approvalStatus === 'approved' ||
+            profile.verificationStatus === 'approved' ||
+            profile.verificationStatus === 'verified' ||
+            profile.isVerified === true;
+          return {
+            ...profile,
+            id: snap.id,
+            isVerified: isApproved,
+            verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || 'pending'),
+            approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || 'pending'),
+          } as UserProfile;
+        }
+
+        // Also check farmers collection
+        const farmerSnap = await getDoc(doc(db, 'farmers', id));
+        if (farmerSnap.exists()) {
+          const data = farmerSnap.data();
+          const { password: _, ...profile } = data;
+          const isApproved =
+            profile.approvalStatus === 'approved' ||
+            profile.verificationStatus === 'approved' ||
+            profile.verificationStatus === 'verified' ||
+            profile.isVerified === true;
+          return {
+            ...profile,
+            id: farmerSnap.id,
+            isVerified: isApproved,
+            verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || 'pending'),
+            approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || 'pending'),
+          } as UserProfile;
         }
       } catch (err) {
         console.warn('[Firebase] getUserById error:', err);
       }
     }
     const localUsers = getLocalRegisteredUsers();
-    const found = localUsers.find((u) => u.id === id);
+    const found = localUsers.find((u) => u.id === id || (u.email && u.email.toLowerCase().trim() === id.toLowerCase().trim()));
     if (found) {
       const { passwordHash: _, ...profile } = found;
-      return profile;
+      const isApproved =
+        profile.approvalStatus === 'approved' ||
+        profile.verificationStatus === 'approved' ||
+        profile.verificationStatus === 'verified' ||
+        profile.isVerified === true;
+      return {
+        ...profile,
+        isVerified: isApproved,
+        verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || 'pending'),
+        approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || 'pending'),
+      };
     }
     return null;
   },

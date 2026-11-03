@@ -86,17 +86,33 @@ export const farmerService = {
         const uSnap = await getDoc(doc(db, 'users', id));
         if (uSnap.exists()) {
           const data = uSnap.data() as UserProfile;
+          const isApproved =
+            data.approvalStatus === 'approved' ||
+            data.verificationStatus === 'approved' ||
+            data.verificationStatus === 'verified' ||
+            data.isVerified === true;
           return {
             ...data,
-            verificationStatus: data.verificationStatus || (data.isVerified ? 'verified' : 'pending'),
+            id: uSnap.id,
+            isVerified: isApproved,
+            verificationStatus: isApproved ? 'approved' : (data.verificationStatus || 'pending'),
+            approvalStatus: isApproved ? 'approved' : (data.approvalStatus || 'pending'),
           };
         }
         const fSnap = await getDoc(doc(db, 'farmers', id));
         if (fSnap.exists()) {
           const data = fSnap.data() as UserProfile;
+          const isApproved =
+            data.approvalStatus === 'approved' ||
+            data.verificationStatus === 'approved' ||
+            data.verificationStatus === 'verified' ||
+            data.isVerified === true;
           return {
             ...data,
-            verificationStatus: data.verificationStatus || (data.isVerified ? 'verified' : 'pending'),
+            id: fSnap.id,
+            isVerified: isApproved,
+            verificationStatus: isApproved ? 'approved' : (data.verificationStatus || 'pending'),
+            approvalStatus: isApproved ? 'approved' : (data.approvalStatus || 'pending'),
           };
         }
       } catch (err) {

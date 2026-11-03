@@ -268,6 +268,44 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
     setLoading(true);
     try {
       const farmerId = user?.id || 'farmer-1';
+
+      // Live sync verification status from database
+      if (user?.id) {
+        try {
+          const latestProfile = await userService.getUserById(user.id);
+          if (latestProfile) {
+            const isApproved =
+              latestProfile.approvalStatus === 'approved' ||
+              latestProfile.verificationStatus === 'approved' ||
+              latestProfile.verificationStatus === 'verified' ||
+              latestProfile.isVerified === true;
+            const currentApproved =
+              user.approvalStatus === 'approved' ||
+              user.verificationStatus === 'approved' ||
+              user.verificationStatus === 'verified' ||
+              user.isVerified === true;
+
+            if (isApproved && !currentApproved) {
+              updateProfile({
+                isVerified: true,
+                verificationStatus: 'approved',
+                approvalStatus: 'approved',
+                rejectionReason: '',
+              });
+            } else if (!isApproved && latestProfile.verificationStatus === 'rejected' && user.verificationStatus !== 'rejected') {
+              updateProfile({
+                isVerified: false,
+                verificationStatus: 'rejected',
+                approvalStatus: 'rejected',
+                rejectionReason: latestProfile.rejectionReason || '',
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('[FarmerDashboard] Profile status sync warning:', e);
+        }
+      }
+
       const [allProducts, allOrders] = await Promise.all([
         productService.getAll(),
         orderService.getAll(),
@@ -501,7 +539,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
                 alt={user.fullName}
                 className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-md"
               />
-              {user.isVerified && (
+              {(user.isVerified || user.verificationStatus === 'approved' || user.approvalStatus === 'approved') && (
                 <div className="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-1 rounded-full shadow-xs">
                   <ShieldCheck className="w-3.5 h-3.5" />
                 </div>
@@ -510,7 +548,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-black text-stone-900">{user.fullName}</h1>
-                {(user.verificationStatus === 'verified' || user.isVerified) ? (
+                {(user.verificationStatus === 'verified' || user.verificationStatus === 'approved' || user.approvalStatus === 'approved' || user.isVerified) ? (
                   <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
                     {t('verifiedFarmer')}
@@ -567,7 +605,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
         )}
 
         {/* Dynamic Verification Status Alert Banner */}
-        {(user.verificationStatus === 'verified' || user.isVerified) ? (
+        {(user.verificationStatus === 'verified' || user.verificationStatus === 'approved' || user.approvalStatus === 'approved' || user.isVerified) ? (
           <div className="mb-8 p-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-100 rounded-3xl border border-emerald-300 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -1061,14 +1099,14 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
             </div>
 
             <div className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
-              (user?.verificationStatus === 'verified' || user?.isVerified)
+              (user?.verificationStatus === 'verified' || user?.verificationStatus === 'approved' || user?.approvalStatus === 'approved' || user?.isVerified)
                 ? 'bg-emerald-50 border-emerald-200'
                 : user?.verificationStatus === 'rejected'
                 ? 'bg-rose-50 border-rose-200'
                 : 'bg-amber-50 border-amber-200'
             }`}>
               <div className="flex items-center gap-3">
-                {(user?.verificationStatus === 'verified' || user?.isVerified) ? (
+                {(user?.verificationStatus === 'verified' || user?.verificationStatus === 'approved' || user?.approvalStatus === 'approved' || user?.isVerified) ? (
                   <ShieldCheck className="w-8 h-8 text-emerald-600 shrink-0" />
                 ) : user?.verificationStatus === 'rejected' ? (
                   <XCircle className="w-8 h-8 text-rose-600 shrink-0" />
@@ -1077,14 +1115,14 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
                 )}
                 <div>
                   <h4 className="font-extrabold text-stone-900 text-sm">
-                    {(user?.verificationStatus === 'verified' || user?.isVerified)
+                    {(user?.verificationStatus === 'verified' || user?.verificationStatus === 'approved' || user?.approvalStatus === 'approved' || user?.isVerified)
                       ? 'Certified & Verified Farmer Account (ధృవీకరించబడిన రైతు)'
                       : user?.verificationStatus === 'rejected'
                       ? 'Verification Rejected (నిరాకరించబడింది)'
                       : 'Verification Pending Review (విచారణలో ఉంది)'}
                   </h4>
                   <p className="text-xs text-stone-600 mt-0.5">
-                    {(user?.verificationStatus === 'verified' || user?.isVerified)
+                    {(user?.verificationStatus === 'verified' || user?.verificationStatus === 'approved' || user?.approvalStatus === 'approved' || user?.isVerified)
                       ? 'Your land records and agricultural credentials have been verified by FarmConnect Administration.'
                       : user?.verificationStatus === 'rejected'
                       ? `Rejection Reason: "${user?.rejectionReason || 'Please review and correct your details.'}"`
@@ -1101,7 +1139,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
                   <RotateCcw className="w-4 h-4" />
                   <span>Resubmit Verification</span>
                 </button>
-              ) : !(user?.verificationStatus === 'verified' || user?.isVerified) ? (
+              ) : !(user?.verificationStatus === 'verified' || user?.verificationStatus === 'approved' || user?.approvalStatus === 'approved' || user?.isVerified) ? (
                 <span className="bg-amber-100 text-amber-900 font-bold text-xs px-3 py-1.5 rounded-xl border border-amber-200">
                   Audit in Progress
                 </span>
