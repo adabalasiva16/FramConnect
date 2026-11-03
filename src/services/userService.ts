@@ -271,105 +271,23 @@ export const userService = {
   },
 
   async getUserById(id: string, email?: string): Promise<UserProfile | null> {
+    const cleanId = (id || '').toLowerCase().trim();
     const cleanEmail = (email || (id && id.includes('@') ? id : '')).toLowerCase().trim();
 
-    if (isFirebaseConfigured()) {
-      try {
-        let matchedProfile: UserProfile | null = null;
-        let isApproved = false;
-
-        // 1. Check users collection by ID
-        const snap = await getDoc(doc(db, 'users', id));
-        if (snap.exists()) {
-          const { password: _, ...profile } = snap.data() as any;
-          matchedProfile = { ...profile, id: snap.id };
-          if (
-            profile.approvalStatus === 'approved' ||
-            profile.verificationStatus === 'approved' ||
-            profile.verificationStatus === 'verified' ||
-            profile.isVerified === true
-          ) {
-            isApproved = true;
-          }
-        }
-
-        // 2. Check farmers collection by ID
-        const farmerSnap = await getDoc(doc(db, 'farmers', id));
-        if (farmerSnap.exists()) {
-          const { password: _, ...profile } = farmerSnap.data() as any;
-          matchedProfile = matchedProfile || { ...profile, id: farmerSnap.id };
-          if (
-            profile.approvalStatus === 'approved' ||
-            profile.verificationStatus === 'approved' ||
-            profile.verificationStatus === 'verified' ||
-            profile.isVerified === true
-          ) {
-            isApproved = true;
-          }
-        }
-
-        // 3. Check by Email in users & farmers collections
-        const targetEmail = cleanEmail || (matchedProfile?.email ? matchedProfile.email.toLowerCase().trim() : '');
-        if (targetEmail) {
-          const uq = query(collection(db, 'users'), where('email', '==', targetEmail));
-          const uSnap = await getDocs(uq);
-          for (const d of uSnap.docs) {
-            const data = d.data() as any;
-            matchedProfile = matchedProfile || { ...data, id: d.id };
-            if (
-              data.approvalStatus === 'approved' ||
-              data.verificationStatus === 'approved' ||
-              data.verificationStatus === 'verified' ||
-              data.isVerified === true
-            ) {
-              isApproved = true;
-            }
-          }
-
-          const fq = query(collection(db, 'farmers'), where('email', '==', targetEmail));
-          const fSnap = await getDocs(fq);
-          for (const d of fSnap.docs) {
-            const data = d.data() as any;
-            matchedProfile = matchedProfile || { ...data, id: d.id };
-            if (
-              data.approvalStatus === 'approved' ||
-              data.verificationStatus === 'approved' ||
-              data.verificationStatus === 'verified' ||
-              data.isVerified === true
-            ) {
-              isApproved = true;
-            }
-          }
-        }
-
-        if (matchedProfile) {
-          return {
-            ...matchedProfile,
-            isVerified: isApproved,
-            verificationStatus: isApproved ? 'approved' : (matchedProfile.verificationStatus || 'pending'),
-            approvalStatus: isApproved ? 'approved' : (matchedProfile.approvalStatus || 'pending'),
-          };
-        }
-      } catch (err) {
-        console.warn('[Firebase] getUserById error:', err);
-      }
-    }
+    // Single source of truth: getAll() merges Firestore users, farmers, and local storage
+    const all = await this.getAll();
+    const found = all.find(
+      (u) =>
+        (cleanEmail && u.email && u.email.toLowerCase().trim() === cleanEmail) ||
+        (cleanId && u.id && u.id.toLowerCase().trim() === cleanId)
+    );
+    if (found) return found;
 
     const localUsers = getLocalRegisteredUsers();
-    const found = localUsers.find((u) => u.id === id || (cleanEmail && u.email.toLowerCase().trim() === cleanEmail));
-    if (found) {
-      const { passwordHash: _, ...profile } = found;
-      const isApproved =
-        profile.approvalStatus === 'approved' ||
-        profile.verificationStatus === 'approved' ||
-        profile.verificationStatus === 'verified' ||
-        profile.isVerified === true;
-      return {
-        ...profile,
-        isVerified: isApproved,
-        verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || 'pending'),
-        approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || 'pending'),
-      };
+    const localFound = localUsers.find((u) => u.id === id || (cleanEmail && u.email.toLowerCase().trim() === cleanEmail));
+    if (localFound) {
+      const { passwordHash: _, ...profile } = localFound;
+      return profile;
     }
     return null;
   },
@@ -377,15 +295,44 @@ export const userService = {
   async getAll(): Promise<UserProfile[]> {
     const userMap = new Map<string, UserProfile>();
 
-    // 1. Local storage users
+    // 1. Local storage registered users
     const local = getLocalRegisteredUsers();
     local.forEach((u) => {
       const { passwordHash: _, ...profile } = u;
       const key = (profile.email || profile.id).toLowerCase().trim();
       userMap.set(key, profile);
+      userMap.set(profile.id, profile);
     });
 
-    // 2. Firestore users
+    // 1.5. Local storage stored farmers list
+    try {
+      const { getStoredFarmers } = await import('../lib/storage');
+      const storedFarmers = getStoredFarmers();
+      storedFarmers.forEach((f) => {
+        const key = (f.email || f.id).toLowerCase().trim();
+        const existing = userMap.get(key) || userMap.get(f.id);
+        const isApproved =
+          f.approvalStatus === 'approved' ||
+          f.verificationStatus === 'approved' ||
+          f.verificationStatus === 'verified' ||
+          f.isVerified === true ||
+          existing?.approvalStatus === 'approved' ||
+          existing?.verificationStatus === 'approved' ||
+          existing?.verificationStatus === 'verified' ||
+          existing?.isVerified === true;
+        const merged: UserProfile = {
+          ...(existing || {}),
+          ...f,
+          isVerified: isApproved,
+          verificationStatus: isApproved ? 'approved' : (f.verificationStatus || existing?.verificationStatus || 'pending'),
+          approvalStatus: isApproved ? 'approved' : (f.approvalStatus || existing?.approvalStatus || 'pending'),
+        };
+        userMap.set(key, merged);
+        userMap.set(f.id, merged);
+      });
+    } catch (e) {}
+
+    // 2. Firestore users & farmers collections
     if (isFirebaseConfigured()) {
       try {
         const snap = await getDocs(collection(db, 'users'));
@@ -414,13 +361,69 @@ export const userService = {
             approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || existing?.approvalStatus || 'pending'),
           };
           userMap.set(key, merged);
+          userMap.set(docId, merged);
+        });
+
+        // Also check farmers collection in Firestore
+        const fSnap = await getDocs(collection(db, 'farmers'));
+        fSnap.forEach((d) => {
+          const { password: _, ...profile } = d.data() as any;
+          const docId = d.id;
+          const key = (profile.email || docId).toLowerCase().trim();
+          const existing = userMap.get(key) || userMap.get(docId);
+
+          const isApproved =
+            profile.approvalStatus === 'approved' ||
+            profile.verificationStatus === 'approved' ||
+            profile.verificationStatus === 'verified' ||
+            profile.isVerified === true ||
+            existing?.approvalStatus === 'approved' ||
+            existing?.verificationStatus === 'approved' ||
+            existing?.verificationStatus === 'verified' ||
+            existing?.isVerified === true;
+
+          const merged: UserProfile = {
+            ...(existing || {}),
+            ...profile,
+            id: docId,
+            isVerified: isApproved,
+            verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || existing?.verificationStatus || 'pending'),
+            approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || existing?.approvalStatus || 'pending'),
+          };
+          userMap.set(key, merged);
+          userMap.set(docId, merged);
         });
       } catch (err) {
         console.warn('[Firebase] userService.getAll error:', err);
       }
     }
 
-    return Array.from(userMap.values());
+    // Deduplicate by unique email or ID
+    const unique = new Map<string, UserProfile>();
+    userMap.forEach((u) => {
+      const uniqueKey = (u.email || u.id).toLowerCase().trim();
+      const existing = unique.get(uniqueKey);
+      if (!existing) {
+        unique.set(uniqueKey, u);
+      } else {
+        const isApproved =
+          u.approvalStatus === 'approved' ||
+          u.verificationStatus === 'approved' ||
+          u.isVerified === true ||
+          existing.approvalStatus === 'approved' ||
+          existing.verificationStatus === 'approved' ||
+          existing.isVerified === true;
+        unique.set(uniqueKey, {
+          ...existing,
+          ...u,
+          isVerified: isApproved,
+          verificationStatus: isApproved ? 'approved' : (u.verificationStatus || existing.verificationStatus || 'pending'),
+          approvalStatus: isApproved ? 'approved' : (u.approvalStatus || existing.approvalStatus || 'pending'),
+        });
+      }
+    });
+
+    return Array.from(unique.values());
   },
 
   async updateUserStatus(userId: string, status: 'verified' | 'approved' | 'rejected' | 'pending', adminUid?: string, reason?: string): Promise<void> {

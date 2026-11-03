@@ -57,6 +57,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dbApprovalStatus, setDbApprovalStatus] = useState<boolean | null>(null);
 
   // Modal states for Product Add / Edit
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -284,20 +285,26 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
               user.verificationStatus === 'approved' &&
               user.isVerified === true;
 
-            if (isApproved && !currentApproved) {
-              updateProfile({
-                isVerified: true,
-                verificationStatus: 'approved',
-                approvalStatus: 'approved',
-                rejectionReason: '',
-              });
-            } else if (!isApproved && latestProfile.verificationStatus === 'rejected' && user.verificationStatus !== 'rejected') {
-              updateProfile({
-                isVerified: false,
-                verificationStatus: 'rejected',
-                approvalStatus: 'rejected',
-                rejectionReason: latestProfile.rejectionReason || '',
-              });
+            if (isApproved) {
+              setDbApprovalStatus(true);
+              if (!currentApproved) {
+                updateProfile({
+                  isVerified: true,
+                  verificationStatus: 'approved',
+                  approvalStatus: 'approved',
+                  rejectionReason: '',
+                });
+              }
+            } else if (latestProfile.verificationStatus === 'rejected') {
+              setDbApprovalStatus(false);
+              if (user.verificationStatus !== 'rejected') {
+                updateProfile({
+                  isVerified: false,
+                  verificationStatus: 'rejected',
+                  approvalStatus: 'rejected',
+                  rejectionReason: latestProfile.rejectionReason || '',
+                });
+              }
             }
           }
         } catch (e) {
@@ -490,6 +497,14 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
   const totalEarnings = orders
     .filter((o) => o.status !== 'cancelled')
     .reduce((sum, o) => sum + o.finalAmount, 0);
+
+  const isVerifiedFarmer =
+    dbApprovalStatus === true ||
+    user?.verificationStatus === 'verified' ||
+    user?.verificationStatus === 'approved' ||
+    user?.approvalStatus === 'approved' ||
+    user?.isVerified === true;
+
   if (!user || user.role !== 'farmer') {
     return (
       <div className="min-h-screen bg-stone-50 pb-24 pt-12">
@@ -552,7 +567,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-black text-stone-900">{user.fullName}</h1>
-                {(user.verificationStatus === 'verified' || user.verificationStatus === 'approved' || user.approvalStatus === 'approved' || user.isVerified) ? (
+                {isVerifiedFarmer ? (
                   <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
                     {t('verifiedFarmer')}
@@ -622,7 +637,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
         )}
 
         {/* Dynamic Verification Status Alert Banner */}
-        {(user.verificationStatus === 'verified' || user.verificationStatus === 'approved' || user.approvalStatus === 'approved' || user.isVerified) ? (
+        {isVerifiedFarmer ? (
           <div className="mb-8 p-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-100 rounded-3xl border border-emerald-300 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -1116,14 +1131,14 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
             </div>
 
             <div className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
-              (user?.verificationStatus === 'verified' || user?.verificationStatus === 'approved' || user?.approvalStatus === 'approved' || user?.isVerified)
+              isVerifiedFarmer
                 ? 'bg-emerald-50 border-emerald-200'
                 : user?.verificationStatus === 'rejected'
                 ? 'bg-rose-50 border-rose-200'
                 : 'bg-amber-50 border-amber-200'
             }`}>
               <div className="flex items-center gap-3">
-                {(user?.verificationStatus === 'verified' || user?.verificationStatus === 'approved' || user?.approvalStatus === 'approved' || user?.isVerified) ? (
+                {isVerifiedFarmer ? (
                   <ShieldCheck className="w-8 h-8 text-emerald-600 shrink-0" />
                 ) : user?.verificationStatus === 'rejected' ? (
                   <XCircle className="w-8 h-8 text-rose-600 shrink-0" />
@@ -1132,14 +1147,14 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
                 )}
                 <div>
                   <h4 className="font-extrabold text-stone-900 text-sm">
-                    {(user?.verificationStatus === 'verified' || user?.verificationStatus === 'approved' || user?.approvalStatus === 'approved' || user?.isVerified)
+                    {isVerifiedFarmer
                       ? 'Certified & Verified Farmer Account (ధృవీకరించబడిన రైతు)'
                       : user?.verificationStatus === 'rejected'
                       ? 'Verification Rejected (నిరాకరించబడింది)'
                       : 'Verification Pending Review (విచారణలో ఉంది)'}
                   </h4>
                   <p className="text-xs text-stone-600 mt-0.5">
-                    {(user?.verificationStatus === 'verified' || user?.verificationStatus === 'approved' || user?.approvalStatus === 'approved' || user?.isVerified)
+                    {isVerifiedFarmer
                       ? 'Your land records and agricultural credentials have been verified by FarmConnect Administration.'
                       : user?.verificationStatus === 'rejected'
                       ? `Rejection Reason: "${user?.rejectionReason || 'Please review and correct your details.'}"`
@@ -1156,7 +1171,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
                   <RotateCcw className="w-4 h-4" />
                   <span>Resubmit Verification</span>
                 </button>
-              ) : !(user?.verificationStatus === 'verified' || user?.verificationStatus === 'approved' || user?.approvalStatus === 'approved' || user?.isVerified) ? (
+              ) : !isVerifiedFarmer ? (
                 <span className="bg-amber-100 text-amber-900 font-bold text-xs px-3 py-1.5 rounded-xl border border-amber-200">
                   Audit in Progress
                 </span>

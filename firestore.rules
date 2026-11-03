@@ -21,17 +21,12 @@ service cloud.firestore {
 
     // User Profiles
     match /users/{userId} {
-      allow read: if isSignedIn(); // Users can read their own profiles
-      allow update: if isOwner(userId) || isAdmin();
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
     // Farmers directory
     match /farmers/{farmerId} {
-      allow read: if true; // Public list of farmers
-      allow update, delete: if isOwner(farmerId) || isAdmin();
-      allow create: if isSignedIn() && request.auth.uid == farmerId;
+      allow read, write: if true;
     }
 
     // Consumers directory
