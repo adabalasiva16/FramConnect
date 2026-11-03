@@ -41,6 +41,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const shouldListenRef = useRef(false);   // Source of truth for "should mic be active"
   const isProcessingRef = useRef(false);   // Avoid processing same text twice
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const chatHistoryRef = useRef<ChatMessage[]>([]); // For use inside callbacks
 
   // Keep chatHistoryRef in sync
