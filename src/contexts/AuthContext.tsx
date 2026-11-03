@@ -58,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = auth.onAuthStateChanged(async (fbUser) => {
       if (fbUser) {
         // User is signed in to Firebase Auth
-        const profile = await userService.getUserById(fbUser.uid);
+        const profile = await userService.getUserById(fbUser.uid, fbUser.email || undefined);
         if (profile) {
           const hasStatusChanged =
             !user ||
@@ -414,6 +414,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user) {
       const updated = { ...user, ...updates };
       setUser(updated);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updated));
+      userService.updateUserProfile(user.id, updates);
       userService.registerUser(updated as UserAccount);
     }
   };

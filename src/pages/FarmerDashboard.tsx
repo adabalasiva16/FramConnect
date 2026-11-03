@@ -270,9 +270,9 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
       const farmerId = user?.id || 'farmer-1';
 
       // Live sync verification status from database
-      if (user?.id) {
+      if (user?.id || user?.email) {
         try {
-          const latestProfile = await userService.getUserById(user.id);
+          const latestProfile = await userService.getUserById(user?.id || '', user?.email || undefined);
           if (latestProfile) {
             const isApproved =
               latestProfile.approvalStatus === 'approved' ||
@@ -280,9 +280,8 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
               latestProfile.verificationStatus === 'verified' ||
               latestProfile.isVerified === true;
             const currentApproved =
-              user.approvalStatus === 'approved' ||
-              user.verificationStatus === 'approved' ||
-              user.verificationStatus === 'verified' ||
+              user.approvalStatus === 'approved' &&
+              user.verificationStatus === 'approved' &&
               user.isVerified === true;
 
             if (isApproved && !currentApproved) {

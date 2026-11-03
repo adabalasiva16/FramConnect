@@ -76,9 +76,9 @@ export const userService = {
       role: account.role,
       farmingExperience: account.farmingExperience,
       bio: account.bio || '',
-      isVerified: account.role === 'farmer' ? false : true,
-      verificationStatus: account.role === 'farmer' ? (account.verificationStatus || 'pending') : 'verified',
-      approvalStatus: account.role === 'farmer' ? (account.approvalStatus || 'pending') : 'approved',
+      isVerified: account.role === 'farmer' ? (Boolean(account.isVerified) || account.verificationStatus === 'approved' || account.approvalStatus === 'approved') : true,
+      verificationStatus: account.role === 'farmer' ? (account.verificationStatus || (account.isVerified ? 'approved' : 'pending')) : 'verified',
+      approvalStatus: account.role === 'farmer' ? (account.approvalStatus || (account.isVerified ? 'approved' : 'pending')) : 'approved',
       rejectionReason: account.rejectionReason || '',
       createdAt: new Date().toISOString(),
     };
@@ -117,12 +117,40 @@ export const userService = {
         const q = query(collection(db, 'users'), where('email', '==', cleanEmail));
         const snap = await getDocs(q);
         if (!snap.empty) {
-          const userDoc = snap.docs[0].data();
+          // If multiple documents exist with this email, prefer the approved one
+          const approvedDoc = snap.docs.find((d) => {
+            const data = d.data();
+            return data.approvalStatus === 'approved' || data.verificationStatus === 'approved' || data.verificationStatus === 'verified' || data.isVerified === true;
+          });
+          const targetDoc = approvedDoc || snap.docs[0];
+          const userDoc = targetDoc.data();
           if (password && userDoc.password && userDoc.password !== password) {
             userDoc.password = password;
           }
           const { password: _, ...profile } = userDoc;
-          return profile as UserProfile;
+
+          // Check if any matching doc in farmers is approved
+          const fq = query(collection(db, 'farmers'), where('email', '==', cleanEmail));
+          const fSnap = await getDocs(fq);
+          const approvedFarmer = fSnap.docs.find((d) => {
+            const data = d.data();
+            return data.approvalStatus === 'approved' || data.verificationStatus === 'approved' || data.verificationStatus === 'verified' || data.isVerified === true;
+          });
+
+          const isApproved =
+            profile.approvalStatus === 'approved' ||
+            profile.verificationStatus === 'approved' ||
+            profile.verificationStatus === 'verified' ||
+            profile.isVerified === true ||
+            Boolean(approvedFarmer);
+
+          return {
+            ...profile,
+            id: targetDoc.id,
+            isVerified: isApproved,
+            verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || 'pending'),
+            approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || 'pending'),
+          } as UserProfile;
         }
       } catch (err: any) {
         if (err.message === 'Incorrect password') throw err;
@@ -176,9 +204,27 @@ export const userService = {
         }
 
         if (!snap.empty) {
-          const userDoc = snap.docs[0].data();
+          const approvedDoc = snap.docs.find((d) => {
+            const data = d.data();
+            return data.approvalStatus === 'approved' || data.verificationStatus === 'approved' || data.verificationStatus === 'verified' || data.isVerified === true;
+          });
+          const targetDoc = approvedDoc || snap.docs[0];
+          const userDoc = targetDoc.data();
           const { password: _, ...profile } = userDoc;
-          return profile as UserProfile;
+
+          const isApproved =
+            profile.approvalStatus === 'approved' ||
+            profile.verificationStatus === 'approved' ||
+            profile.verificationStatus === 'verified' ||
+            profile.isVerified === true;
+
+          return {
+            ...profile,
+            id: targetDoc.id,
+            isVerified: isApproved,
+            verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || 'pending'),
+            approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || 'pending'),
+          } as UserProfile;
         }
       } catch (err) {
         console.warn('[Firebase] loginUserByIdentifier Firestore error:', err);
@@ -224,51 +270,93 @@ export const userService = {
     return profile;
   },
 
-  async getUserById(id: string): Promise<UserProfile | null> {
+  async getUserById(id: string, email?: string): Promise<UserProfile | null> {
+    const cleanEmail = (email || (id && id.includes('@') ? id : '')).toLowerCase().trim();
+
     if (isFirebaseConfigured()) {
       try {
+        let matchedProfile: UserProfile | null = null;
+        let isApproved = false;
+
+        // 1. Check users collection by ID
         const snap = await getDoc(doc(db, 'users', id));
         if (snap.exists()) {
-          const data = snap.data();
-          const { password: _, ...profile } = data;
-          const isApproved =
+          const { password: _, ...profile } = snap.data() as any;
+          matchedProfile = { ...profile, id: snap.id };
+          if (
             profile.approvalStatus === 'approved' ||
             profile.verificationStatus === 'approved' ||
             profile.verificationStatus === 'verified' ||
-            profile.isVerified === true;
-          return {
-            ...profile,
-            id: snap.id,
-            isVerified: isApproved,
-            verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || 'pending'),
-            approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || 'pending'),
-          } as UserProfile;
+            profile.isVerified === true
+          ) {
+            isApproved = true;
+          }
         }
 
-        // Also check farmers collection
+        // 2. Check farmers collection by ID
         const farmerSnap = await getDoc(doc(db, 'farmers', id));
         if (farmerSnap.exists()) {
-          const data = farmerSnap.data();
-          const { password: _, ...profile } = data;
-          const isApproved =
+          const { password: _, ...profile } = farmerSnap.data() as any;
+          matchedProfile = matchedProfile || { ...profile, id: farmerSnap.id };
+          if (
             profile.approvalStatus === 'approved' ||
             profile.verificationStatus === 'approved' ||
             profile.verificationStatus === 'verified' ||
-            profile.isVerified === true;
+            profile.isVerified === true
+          ) {
+            isApproved = true;
+          }
+        }
+
+        // 3. Check by Email in users & farmers collections
+        const targetEmail = cleanEmail || (matchedProfile?.email ? matchedProfile.email.toLowerCase().trim() : '');
+        if (targetEmail) {
+          const uq = query(collection(db, 'users'), where('email', '==', targetEmail));
+          const uSnap = await getDocs(uq);
+          for (const d of uSnap.docs) {
+            const data = d.data() as any;
+            matchedProfile = matchedProfile || { ...data, id: d.id };
+            if (
+              data.approvalStatus === 'approved' ||
+              data.verificationStatus === 'approved' ||
+              data.verificationStatus === 'verified' ||
+              data.isVerified === true
+            ) {
+              isApproved = true;
+            }
+          }
+
+          const fq = query(collection(db, 'farmers'), where('email', '==', targetEmail));
+          const fSnap = await getDocs(fq);
+          for (const d of fSnap.docs) {
+            const data = d.data() as any;
+            matchedProfile = matchedProfile || { ...data, id: d.id };
+            if (
+              data.approvalStatus === 'approved' ||
+              data.verificationStatus === 'approved' ||
+              data.verificationStatus === 'verified' ||
+              data.isVerified === true
+            ) {
+              isApproved = true;
+            }
+          }
+        }
+
+        if (matchedProfile) {
           return {
-            ...profile,
-            id: farmerSnap.id,
+            ...matchedProfile,
             isVerified: isApproved,
-            verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || 'pending'),
-            approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || 'pending'),
-          } as UserProfile;
+            verificationStatus: isApproved ? 'approved' : (matchedProfile.verificationStatus || 'pending'),
+            approvalStatus: isApproved ? 'approved' : (matchedProfile.approvalStatus || 'pending'),
+          };
         }
       } catch (err) {
         console.warn('[Firebase] getUserById error:', err);
       }
     }
+
     const localUsers = getLocalRegisteredUsers();
-    const found = localUsers.find((u) => u.id === id || (u.email && u.email.toLowerCase().trim() === id.toLowerCase().trim()));
+    const found = localUsers.find((u) => u.id === id || (cleanEmail && u.email.toLowerCase().trim() === cleanEmail));
     if (found) {
       const { passwordHash: _, ...profile } = found;
       const isApproved =

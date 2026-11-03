@@ -139,17 +139,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
             const cleanEmail = u.email.toLowerCase().trim();
             const uq = query(collection(db, 'users'), where('email', '==', cleanEmail));
             const uSnap = await getDocs(uq);
-            uSnap.forEach(async (dSnap) => {
+            for (const dSnap of uSnap.docs) {
               await setDoc(doc(db, 'users', dSnap.id), updatePayload, { merge: true });
-            });
+            }
             const fq = query(collection(db, 'farmers'), where('email', '==', cleanEmail));
             const fSnap = await getDocs(fq);
-            fSnap.forEach(async (dSnap) => {
+            for (const dSnap of fSnap.docs) {
               await setDoc(doc(db, 'farmers', dSnap.id), updatePayload, { merge: true });
-            });
-          } catch (e) {}
+            }
+          } catch (e) {
+            console.warn('[AdminDashboard] Firestore email sync error:', e);
+          }
         }
       }
+
+      // Update active session in localStorage if current browser holds this farmer's session
+      try {
+        const sessionRaw = localStorage.getItem('farmconnect_active_session_v2');
+        if (sessionRaw) {
+          const s = JSON.parse(sessionRaw);
+          if (s && (s.id === farmerId || (u.email && s.email && s.email.toLowerCase().trim() === u.email.toLowerCase().trim()))) {
+            const updated = { ...s, ...updatePayload };
+            localStorage.setItem('farmconnect_active_session_v2', JSON.stringify(updated));
+          }
+        }
+      } catch (e) {}
 
       // 2. Persist in farmerService and userService
       await farmerService.approveFarmer(farmerId, adminUid);
