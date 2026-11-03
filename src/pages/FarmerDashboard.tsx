@@ -533,17 +533,22 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
         {/* Welcome Header */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-xs mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="relative">
+            <div
+              className="relative cursor-pointer group"
+              onClick={() => {
+                setActiveTab('profile');
+                profileFileInputRef.current?.click();
+              }}
+              title={language === 'te' ? 'గ్యాలరీ నుండి DP మార్చడానికి క్లిక్ చేయండి' : 'Click to upload DP from Gallery'}
+            >
               <img
                 src={user.avatarUrl || 'https://images.unsplash.com/photo-1595273670150-bd0c3c392e46?w=200'}
                 alt={user.fullName}
-                className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-md"
+                className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-md group-hover:opacity-90 transition-opacity"
               />
-              {(user.isVerified || user.verificationStatus === 'approved' || user.approvalStatus === 'approved') && (
-                <div className="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-1 rounded-full shadow-xs">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                </div>
-              )}
+              <div className="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-1 rounded-full shadow-xs border border-white">
+                <Camera className="w-3.5 h-3.5" />
+              </div>
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -583,6 +588,19 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
             >
               <Plus className="w-4 h-4" />
               <span>{t('addNewProduct')}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab('profile');
+                setTimeout(() => {
+                  document.getElementById('edit-profile-form')?.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+              }}
+              className="bg-stone-100 hover:bg-emerald-50 hover:text-emerald-800 text-stone-700 text-xs sm:text-sm font-bold px-4 py-2.5 sm:py-3 rounded-2xl border border-stone-200 transition-colors flex items-center gap-1.5"
+            >
+              <Edit2 className="w-4 h-4" />
+              <span>{language === 'te' ? 'ప్రొఫైల్ & DP సవరణ' : 'Edit Profile & DP'}</span>
             </button>
 
             <button
@@ -1362,18 +1380,49 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
             <button
               onClick={async () => {
                 if (!user) return;
+                setIsUploadingProfileImg(true);
                 try {
-                  await userService.updateUserProfile(user.id, resubmitForm);
-                  updateProfile(resubmitForm);
-                  setProfileSuccessMsg('Profile updated successfully!');
-                  setTimeout(() => setProfileSuccessMsg(''), 3000);
+                  let finalAvatarUrl = user.avatarUrl;
+                  if (profileImageFile) {
+                    setProfileUploadProgress(20);
+                    finalAvatarUrl = await uploadProfilePicture(
+                      profileImageFile,
+                      user.id,
+                      (pct) => setProfileUploadProgress(pct)
+                    );
+                    await userService.updateUserProfilePhoto(user.id, finalAvatarUrl);
+                    setProfileImageFile(null);
+                    setProfileImagePreview(null);
+                  }
+                  const updates = { ...resubmitForm, avatarUrl: finalAvatarUrl };
+                  await userService.updateUserProfile(user.id, updates);
+                  updateProfile(updates);
+                  setProfileSuccessMsg(
+                    language === 'te'
+                      ? 'ప్రొఫైల్ మరియు DP విజయవంతంగా నవీకరించబడ్డాయి ✓'
+                      : 'Profile and DP updated successfully! ✓'
+                  );
+                  setTimeout(() => setProfileSuccessMsg(''), 4000);
                 } catch (err: any) {
                   setProfileImageError('Failed to update profile: ' + err.message);
+                } finally {
+                  setIsUploadingProfileImg(false);
                 }
               }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md transition-colors"
+              disabled={isUploadingProfileImg}
+              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-md transition-colors flex items-center gap-2"
             >
-              Save Profile Changes
+              {isUploadingProfileImg ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{language === 'te' ? 'ప్రొఫైల్ వివరాలను సేవ్ చేయండి' : 'Save Profile Changes'}</span>
+                </>
+              )}
             </button>
           </div>
         )}

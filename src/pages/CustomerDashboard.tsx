@@ -249,20 +249,39 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
       <div className="container mx-auto max-w-6xl px-4 sm:px-6">
         {/* Welcome Banner */}
         <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 rounded-3xl p-6 sm:p-8 text-white shadow-md mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="bg-emerald-500/20 text-emerald-200 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-emerald-400/20">
-                {language === 'te' ? 'రైతు బజార్ డిజిటల్ కన్సోల్' : 'Direct Consumer Portal'}
-              </span>
+          <div className="flex items-center gap-4">
+            <div
+              className="relative group cursor-pointer"
+              onClick={() => {
+                setEditProfileOpen(true);
+                setTimeout(() => profileFileInputRef.current?.click(), 150);
+              }}
+              title={language === 'te' ? 'గ్యాలరీ నుండి DP మార్చడానికి క్లిక్ చేయండి' : 'Click to upload DP from Gallery'}
+            >
+              <img
+                src={user.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200'}
+                alt={user.fullName}
+                className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-400 shadow-md group-hover:opacity-90 transition-opacity"
+              />
+              <div className="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-1 rounded-full shadow-xs border border-white">
+                <Camera className="w-3.5 h-3.5" />
+              </div>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black">
-              {language === 'te' ? `స్వాగతం, ${user.fullName}!` : `Welcome back, ${user.fullName}!`}
-            </h1>
-            <p className="text-emerald-100 text-xs sm:text-sm mt-1 max-w-xl">
-              {language === 'te'
-                ? 'మీ ప్రాంతంలోని ధృవీకరించబడిన రైతుల నుండి నేరుగా తాజా ఆహారాన్ని ఆర్డర్ చేయండి.'
-                : 'Connect with verified farmers in Krishna & Guntur districts for fresh pesticide-free harvests.'}
-            </p>
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="bg-emerald-500/20 text-emerald-200 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-emerald-400/20">
+                  {language === 'te' ? 'రైతు బజార్ డిజిటల్ కన్సోల్' : 'Direct Consumer Portal'}
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black">
+                {language === 'te' ? `స్వాగతం, ${user.fullName}!` : `Welcome back, ${user.fullName}!`}
+              </h1>
+              <p className="text-emerald-100 text-xs sm:text-sm mt-1 max-w-xl">
+                {language === 'te'
+                  ? 'మీ ప్రాంతంలోని ధృవీకరించబడిన రైతుల నుండి నేరుగా తాజా ఆహారాన్ని ఆర్డర్ చేయండి.'
+                  : 'Connect with verified farmers in Krishna & Guntur districts for fresh pesticide-free harvests.'}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -552,17 +571,47 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     type="file"
                     ref={profileFileInputRef}
                     onChange={handleProfileFileSelect}
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,image/jpg"
                     className="hidden"
                   />
-                  <button
-                    type="button"
-                    onClick={() => profileFileInputRef.current?.click()}
-                    className="border border-stone-300 hover:border-emerald-600 bg-white hover:bg-emerald-50 text-emerald-800 font-extrabold text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors shadow-2xs"
-                  >
-                    <Camera className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Change Profile Picture</span>
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => profileFileInputRef.current?.click()}
+                      className="border border-stone-300 hover:border-emerald-600 bg-white hover:bg-emerald-50 text-emerald-800 font-extrabold text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors shadow-2xs"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>{language === 'te' ? 'గ్యాలరీ నుండి అప్‌లోడ్ చేయండి' : 'Upload from Gallery'}</span>
+                    </button>
+                    {profileImageFile && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!profileImageFile || !user) return;
+                          setIsUploadingProfileImg(true);
+                          setProfileUploadProgress(20);
+                          try {
+                            const url = await uploadProfilePicture(profileImageFile, user.id, (p) => setProfileUploadProgress(p));
+                            setProfileAvatarUrl(url);
+                            await userService.updateUserProfile(user.id, { avatarUrl: url });
+                            updateProfile({ avatarUrl: url });
+                            setProfileImageFile(null);
+                            setProfileImagePreview(null);
+                            setProfileSuccessMsg(language === 'te' ? 'DP విజయవంతంగా సేవ్ చేయబడింది!' : 'Profile picture saved!');
+                            setTimeout(() => setProfileSuccessMsg(''), 3000);
+                          } catch (err: any) {
+                            setProfileErrorMsg(err.message || 'Upload failed');
+                          } finally {
+                            setIsUploadingProfileImg(false);
+                          }
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-xs"
+                      >
+                        {isUploadingProfileImg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                        <span>{language === 'te' ? 'DP సేవ్ చేయండి' : 'Save DP'}</span>
+                      </button>
+                    )}
+                  </div>
                   <span className="text-[10px] text-stone-400 block mt-1">JPEG, PNG or WEBP (Square cropped)</span>
                 </div>
               </div>
