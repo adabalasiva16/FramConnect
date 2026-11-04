@@ -42,7 +42,44 @@ function getSmartAgriculturalResponse(message, isTelugu, userRole) {
     };
   }
 
-  // 2. Specific Crop Prices
+  // 2. Pesticide, Pest & Disease Advisory
+  if (
+    q.includes('pesticide') ||
+    q.includes('పురుగు') ||
+    q.includes('తెగులు') ||
+    q.includes('మందు') ||
+    q.includes('pest') ||
+    q.includes('disease') ||
+    q.includes('స్ప్రే')
+  ) {
+    if (q.includes('మిరప') || q.includes('chilli')) {
+      return {
+        reply: isTelugu
+          ? 'మిరపలో తామర పురుగులు లేదా బొబ్బర తెగులు నివారణకు: వేప నూనె 10,000 ppm (3-5 మి.లీ/లీటరు) పిచికారీ చేయండి. ఉధృతి ఎక్కువగా ఉంటే డైఫెన్థియురాన్ 1.25 గ్రాములు లీటరు నీటికి కలిపి పిచికారీ చేయండి.'
+          : 'For Chilli thrips & leaf curl: Spray Neem oil (10,000 ppm) at 3-5 ml/L. For severe attacks, apply Diafenthiuron (50% WP) at 1.25 g/L under expert advisory.',
+        action: null,
+        suggestedFollowUps: isTelugu ? ['టమాటాలో పురుగులు', 'సేంద్రీయ ఎరువులు'] : ['Tomato pests', 'Organic fertilizers'],
+      };
+    }
+    if (q.includes('టమాటా') || q.includes('tomato')) {
+      return {
+        reply: isTelugu
+          ? 'టమాటాలో కాయ తొలుచు పురుగు నివారణకు ఎకరానికి 5-8 లింగాకర్షక బుట్టలు పెట్టండి. ఆకుమచ్చ తెగులుకు మాంకోజెబ్ 2.5 గ్రాములు లీటరు నీటికి కలిపి పిచికారీ చేయండి.'
+          : 'For Tomato fruit borer: Install 5-8 pheromone traps/acre. For leaf spot/blight, spray Mancozeb at 2.5 g/L of water.',
+        action: null,
+        suggestedFollowUps: isTelugu ? ['టమాటా ధర ఎంత?', 'మిరప తెగుళ్లు'] : ['Tomato price', 'Chilli pests'],
+      };
+    }
+    return {
+      reply: isTelugu
+        ? 'సస్యరక్షణకు సమగ్ర పురుగు నివారణ పద్ధతులు: 1) రసం పీల్చే పురుగులకు వేప నూనె 10,000 ppm (3-5 మి.లీ/లీటరు). 2) కాయ తొలుచు పురుగులకు లింగాకర్షక బుట్టలు. 3) శిలీంద్ర తెగుళ్లకు కాపర్ ఆక్సిక్లోరైడ్ లేదా మాంకోజెబ్. మీ నిర్దిష్ట పంట పేరు చెబితే ఖచ్చితమైన సలహా ఇస్తాను.'
+        : 'For pest control, Integrated Pest Management (IPM) is best: 1) For sucking pests: Neem oil (10,000 ppm) at 3-5 ml/L. 2) For borers: Pheromone traps. 3) For fungal spots: Copper Oxychloride or Mancozeb. Which specific crop are you treating?',
+      action: null,
+      suggestedFollowUps: isTelugu ? ['మిరపలో తెగుళ్లు', 'టమాటాలో పురుగులు'] : ['Chilli pests', 'Tomato pests'],
+    };
+  }
+
+  // 3. Specific Crop Prices
   if (q.includes('టమాటా') || q.includes('tomato')) {
     return {
       reply: isTelugu

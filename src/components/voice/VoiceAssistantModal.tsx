@@ -21,7 +21,46 @@ interface ChatMessage {
   followUps?: string[];
 }
 
-// ── Pure helper: conversational chit-chat (Instant friendly replies) ────────
+// ── Word Deduplicator: Eliminates repeated stutter words from Chrome Speech API ──
+function deduplicateWords(text: string): string {
+  if (!text) return '';
+  const rawWords = text.trim().split(/\s+/);
+  if (rawWords.length <= 1) return text.trim();
+
+  // 1. Single consecutive repeated word removal (e.g. "suggest suggest suggest pesticides" -> "suggest pesticides")
+  const singleCleaned: string[] = [];
+  for (let i = 0; i < rawWords.length; i++) {
+    const word = rawWords[i];
+    if (i > 0 && word.toLowerCase() === rawWords[i - 1].toLowerCase()) {
+      continue;
+    }
+    singleCleaned.push(word);
+  }
+
+  // 2. Two-word consecutive phrase repeat removal (e.g. "suggest pesticides suggest pesticides")
+  if (singleCleaned.length >= 4) {
+    const phraseCleaned: string[] = [];
+    let i = 0;
+    while (i < singleCleaned.length) {
+      if (
+        i + 3 < singleCleaned.length &&
+        singleCleaned[i].toLowerCase() === singleCleaned[i + 2].toLowerCase() &&
+        singleCleaned[i + 1].toLowerCase() === singleCleaned[i + 3].toLowerCase()
+      ) {
+        phraseCleaned.push(singleCleaned[i], singleCleaned[i + 1]);
+        i += 4;
+      } else {
+        phraseCleaned.push(singleCleaned[i]);
+        i++;
+      }
+    }
+    return phraseCleaned.join(' ');
+  }
+
+  return singleCleaned.join(' ');
+}
+
+// ── Pure helper: conversational chit-chat ────────────────────────────────────
 function getConvoReply(text: string, isTe: boolean): string | null {
   const q = text.toLowerCase().trim();
 
@@ -31,7 +70,7 @@ function getConvoReply(text: string, isTe: boolean): string | null {
     /^(నమస్కారం|నమస్కార|హలో|హాయ్|నమస్తే)\b/.test(q)
   ) {
     return isTe
-      ? 'నమస్కారం! నేను మీ FarmConnect AI సహాయకుడిని. మీకు వ్యవసాయం, పంట ధరలు లేదా ఏదైనా సలహా కావాలా? అడగండి!'
+      ? 'నమస్కారం! నేను మీ FarmConnect AI సహాయకుడిని. మీకు వ్యవసాయం, పంట ధరలు లేదా చీడపీడల నివారణ సలహాలు కావాలా? అడగండి!'
       : 'Hello! I am your FarmConnect AI Assistant. How can I help you today with crops, market rates, or farming advice?';
   }
 
@@ -98,8 +137,16 @@ function getConvoReply(text: string, isTe: boolean): string | null {
 function getLocalReply(text: string, isTe: boolean): { reply: string; action?: { type: string; param?: string } } {
   const q = text.toLowerCase();
 
-  // ── A. Pest & Disease Advice (పురుగులు & తెగుళ్లు) ──
-  if (q.includes('పురుగు') || q.includes('తెగులు') || q.includes('pest') || q.includes('disease') || q.includes('మందు') || q.includes('స్ప్రే')) {
+  // ── A. Pest & Disease & Pesticide Advice (పురుగులు, తెగుళ్లు, మందులు) ──
+  if (
+    q.includes('pesticide') ||
+    q.includes('పురుగు') ||
+    q.includes('తెగులు') ||
+    q.includes('మందు') ||
+    q.includes('pest') ||
+    q.includes('disease') ||
+    q.includes('స్ప్రే')
+  ) {
     if (q.includes('మిరప') || q.includes('chilli')) {
       return {
         reply: isTe
@@ -121,10 +168,11 @@ function getLocalReply(text: string, isTe: boolean): { reply: string; action?: {
           : 'For Paddy stem borer: Apply Cartap Hydrochloride 4G granules at 8 kg per acre with standing water.',
       };
     }
+    // General Pesticide Recommendation
     return {
       reply: isTe
-        ? 'చీడపీడల నివారణకు ముందుగా వేప కషాయం లేదా జీవామృతం పిచికారీ చేయడం ఉత్తమం. ఏ పంటకు ఏ పురుగు సమస్య ఉందో వివరంగా చెబితే ఖచ్చితమైన సలహా ఇస్తాను.'
-        : 'For pest control, bio-solutions like Neem oil or Trichoderma are great first steps. Mention your specific crop and pest symptoms for exact recommendations.',
+        ? 'సస్యరక్షణకు సమగ్ర పురుగు నివారణ (IPM) ఉత్తమం: 1) రసం పీల్చే పురుగులకు వేప నూనె 10,000 ppm (3-5 మి.లీ/లీటరు). 2) కాయ తొలుచు పురుగులకు లింగాకర్షక బుట్టలు. 3) శిలీంద్ర తెగుళ్లకు మాంకోజెబ్ లేదా కాపర్ ఆక్సిక్లోరైడ్. మీరు ఏ పంట కోసం సలహా కోరుతున్నారు?'
+        : 'For pest control, Integrated Pest Management (IPM) works best: 1) For sucking pests: Neem oil (10,000 ppm) at 3-5 ml/L. 2) For borers: Pheromone traps. 3) For fungal blights: Mancozeb or Copper Oxychloride. Which specific crop are you treating?',
     };
   }
 
@@ -240,8 +288,8 @@ function getLocalReply(text: string, isTe: boolean): { reply: string; action?: {
 
   return {
     reply: isTe
-      ? `మీరు అడిగిన "${text}" గురించి మార్కెట్‌లో వెతుకుతున్నాను. కింద బటన్ నొక్కి వివరాలు చూడండి.`
-      : `Searching farm harvests for "${text}". Tap below to explore listings.`,
+      ? `మీరు అడిగిన "${text}" గురించి పరిశీలించాను. వ్యవసాయ సలహాలు, మార్కెట్ ధరలు లేదా ఆర్డర్ల కోసం నేను మీకు సహాయపడతాను.`
+      : `I noted your query about "${text}". I can provide agricultural tips, crop prices, or help you navigate the marketplace.`,
     action: { type: 'NAVIGATE_MARKETPLACE', param: text },
   };
 }
@@ -267,12 +315,11 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 
   /* ─── Stable Refs ─── */
   const recRef             = useRef<any>(null);
-  const wantListenRef      = useRef(false);
-  const busyRef            = useRef(false);
   const isSpeakingRef      = useRef(false);
-  const currentTextRef     = useRef('');             // Holds the current session transcript (NO DUPLICATION)
-  const silenceTimerRef    = useRef<any>(null);      // 2.4s silence detector
+  const currentTextRef     = useRef('');             // Single clean current sentence
+  const silenceTimerRef    = useRef<any>(null);      // 2.0s silence detector
   const chatEndRef         = useRef<HTMLDivElement>(null);
+  const isProcessingRef    = useRef(false);
 
   // Live state refs
   const langRef       = useRef(language);
@@ -295,7 +342,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const speakText = (text: string) => {
     if (!ttsRef.current || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     try {
-      // 1. Immediately turn OFF microphone so it NEVER hears itself!
+      // 1. Immediately stop microphone so it NEVER hears itself!
       stopListeningInternal();
       isSpeakingRef.current = true;
 
@@ -313,7 +360,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       utt.onend = () => {
         setTimeout(() => {
           isSpeakingRef.current = false;
-        }, 500);
+        }, 400);
       };
 
       utt.onerror = () => {
@@ -359,9 +406,10 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 
   /* ─── Process User Query (Mini-ChatGPT conversational pipeline) ────────── */
   const handleUserText = async (rawText: string) => {
-    const clean = rawText.trim();
-    if (!clean || busyRef.current) return;
-    busyRef.current = true;
+    // Clean and deduplicate words
+    const clean = deduplicateWords(rawText.trim());
+    if (!clean || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     setIsProcessing(true);
 
     const isTe = langRef.current === 'te';
@@ -372,7 +420,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     if (convo) {
       addMsg({ role: 'assistant', text: convo });
       speakText(convo);
-      busyRef.current = false;
+      isProcessingRef.current = false;
       setIsProcessing(false);
       return;
     }
@@ -396,23 +444,24 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       addMsg({ role: 'assistant', text: reply, action });
       speakText(reply);
     } finally {
-      busyRef.current = false;
+      isProcessingRef.current = false;
       setIsProcessing(false);
     }
   };
 
   handleTextRef.current = handleUserText;
 
-  /* ─── Setup Speech Recognition Without Audio Duplication ───────────────── */
+  /* ─── Setup Speech Recognition with Single-Utterance Mode (ZERO DUPLICATION) ─── */
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) { setBrowserSupported(false); return; }
 
     const rec = new SR();
-    rec.continuous     = true;
+    // CRITICAL: continuous = false eliminates Chrome's stutter-loop where it duplicates chunks
+    rec.continuous     = false;
     rec.interimResults = true;
-    rec.maxAlternatives = 3;
+    rec.maxAlternatives = 1;
     rec.lang = 'en-IN';
 
     rec.onstart = () => {
@@ -421,53 +470,45 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     };
 
     rec.onresult = (e: any) => {
-      // If assistant is currently speaking or processing, drop incoming audio immediately!
-      if (isSpeakingRef.current || busyRef.current) {
+      if (isSpeakingRef.current || isProcessingRef.current) {
         return;
       }
 
-      // Reconstruct the FULL transcript directly from e.results — NEVER APPEND TO OLD STATE!
-      // This completely eliminates "takes voice 2 or 3 times" duplication.
-      let fullTranscript = '';
-      for (let i = 0; i < e.results.length; i++) {
-        const item = e.results[i];
-        if (item && item[0]) {
-          fullTranscript += item[0].transcript + ' ';
-        }
+      // Get the latest transcript directly from result 0
+      let latestText = '';
+      if (e.results && e.results[0] && e.results[0][0]) {
+        latestText = e.results[0][0].transcript;
       }
 
-      const cleanTranscript = fullTranscript.trim();
-      if (!cleanTranscript) return;
+      if (!latestText) return;
 
-      currentTextRef.current = cleanTranscript;
-      setInterimText(cleanTranscript);
+      const deduplicated = deduplicateWords(latestText);
+      currentTextRef.current = deduplicated;
+      setInterimText(deduplicated);
 
-      // Clear previous silence timer
+      // Reset the silence timer
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
       }
 
-      // Auto turn-off mic and send after ~2.4 seconds of silence
+      // 2.0s of silence will trigger sending
       silenceTimerRef.current = setTimeout(() => {
-        const textToSend = currentTextRef.current.trim();
-        if (textToSend && !isSpeakingRef.current && !busyRef.current) {
+        const textToSend = deduplicateWords(currentTextRef.current.trim());
+        if (textToSend && !isSpeakingRef.current && !isProcessingRef.current) {
           currentTextRef.current = '';
           setInterimText('');
           stopListeningInternal();
           handleTextRef.current(textToSend);
         }
-      }, 2400);
+      }, 2000);
     };
 
     rec.onerror = (e: any) => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         setPermDenied(true);
-        wantListenRef.current = false;
         setIsListening(false);
       } else if (e.error === 'audio-capture') {
         setErrorMsg(langRef.current === 'te' ? '❌ మైక్రోఫోన్ కనుగొనబడలేదు.' : '❌ No microphone found.');
-        wantListenRef.current = false;
         setIsListening(false);
       } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
         console.warn('SpeechRecognition error:', e.error);
@@ -475,14 +516,19 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     };
 
     rec.onend = () => {
-      if (wantListenRef.current && !isSpeakingRef.current && !busyRef.current) {
-        setTimeout(() => {
-          if (wantListenRef.current && recRef.current && !isSpeakingRef.current && !busyRef.current) {
-            try { recRef.current.start(); } catch (_) {}
-          }
-        }, 150);
-      } else {
-        setIsListening(false);
+      setIsListening(false);
+
+      // If user paused and recognition naturally ended, send the clean query now!
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+
+      const textToSend = deduplicateWords(currentTextRef.current.trim());
+      if (textToSend && !isSpeakingRef.current && !isProcessingRef.current) {
+        currentTextRef.current = '';
+        setInterimText('');
+        handleTextRef.current(textToSend);
       }
     };
 
@@ -503,7 +549,6 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 
   /* ─── Stop Listening Helper ────────────────────────────────────────────── */
   const stopListeningInternal = () => {
-    wantListenRef.current = false;
     setIsListening(false);
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
@@ -549,7 +594,6 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     setPermDenied(false);
     setInterimText('');
     currentTextRef.current = '';
-    wantListenRef.current = true;
 
     try {
       recRef.current.lang = language === 'te' ? 'te-IN' : 'en-IN';
@@ -559,26 +603,25 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       if (msg.includes('already started') || msg.includes('already running')) {
         setIsListening(true);
       } else {
-        wantListenRef.current = false;
         console.warn('Mic start error:', e);
         setErrorMsg(language === 'te' ? '⚠ మైక్ ప్రారంభించడంలో సమస్య. మళ్లీ నొక్కండి.' : '⚠ Could not start microphone. Please tap again.');
       }
     }
   };
 
-  // User manually stops mic early before 2.4s timeout
+  // User manually stops mic early
   const stopListeningManual = () => {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
     }
 
-    const textToSend = currentTextRef.current.trim() || interimText.trim();
+    const textToSend = deduplicateWords(currentTextRef.current.trim() || interimText.trim());
     currentTextRef.current = '';
     setInterimText('');
     stopListeningInternal();
 
-    if (textToSend && !isSpeakingRef.current && !busyRef.current) {
+    if (textToSend && !isSpeakingRef.current && !isProcessingRef.current) {
       handleTextRef.current(textToSend);
     }
   };
@@ -597,17 +640,17 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const quickCommands = language === 'te'
     ? [
         { label: 'నమస్కారం! బాగున్నారా? 👋', query: 'నమస్కారం! మీరు ఎలా ఉన్నారు?' },
+        { label: 'పురుగుల నివారణ సలహా ఇవ్వండి 🌿', query: 'పురుగుల నివారణకు సలహా ఇవ్వండి' },
         { label: 'మిరపలో పురుగు నివారణ సలహా 🌶', query: 'మిరప పంటలో పురుగుల నివారణకు సలహా ఇవ్వండి' },
         { label: 'టమాటా ధర ఎంత? 🍅', query: 'టమాటా ధర ఎంత?' },
         { label: 'మంచి లాభం పొందడం ఎలా? 💡', query: 'పంటను మంచి ధరకు ఎలా అమ్మాలి?' },
-        { label: 'నేటి మార్కెట్ ధరలు 📊', query: 'నేటి మార్కెట్ ధరలు చూపించు' },
       ]
     : [
         { label: 'Hello! How are you? 👋', query: 'Hello! How are you doing today?' },
+        { label: 'Suggest pesticides 🌿', query: 'Suggest pesticides for pest control' },
         { label: 'Chilli pest control tips 🌶', query: 'Give me advice for pest control in chilli' },
         { label: 'Tomato price today? 🍅', query: "What is today's tomato price?" },
         { label: 'How to maximize profits? 💡', query: 'How to get best price for my crops?' },
-        { label: 'Live market prices 📊', query: "Show today's market prices" },
       ];
 
   if (!isOpen) return null;
@@ -811,7 +854,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                 onChange={(e) => setManualQuery(e.target.value)}
                 placeholder={
                   isListening
-                    ? (language === 'te' ? '🎤 వింటున్నాను... మాట్లాడి 2-3 సెకన్లు ఆగండి' : '🎤 Listening... speak & pause to send')
+                    ? (language === 'te' ? '🎤 వింటున్నాను... మాట్లాడి ఆపండి' : '🎤 Listening... speak and pause')
                     : (language === 'te' ? 'నాతో మాట్లాడండి లేదా టైప్ చేయండి...' : 'Chat, ask advice or type here...')
                 }
                 disabled={isProcessing}
@@ -827,14 +870,14 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
             </form>
           </div>
 
-          {/* Listening Live Status & Silence Turn Countdown */}
+          {/* Listening Live Status */}
           {isListening && (
             <div className="mt-2 flex items-center justify-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
               <span className="text-xs text-rose-600 font-semibold">
                 {language === 'te'
-                  ? 'వింటున్నాము — మాట్లాడటం ఆపిన 2-3 సెకన్లలో సమాధానం వస్తుంది'
-                  : 'Listening — stop speaking to automatically send'}
+                  ? 'వింటున్నాము — మాట్లాడటం ఆపగానే సమాధానం వస్తుంది'
+                  : 'Listening — pause when done to get your answer'}
               </span>
               <div className="flex items-end gap-0.5 h-4">
                 {[1, 2, 3, 4].map(i => (
