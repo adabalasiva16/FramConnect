@@ -21,66 +21,146 @@ interface ChatMessage {
   followUps?: string[];
 }
 
-// ── Pure helper: conversational chit-chat (instant mini-ChatGPT responses) ───
+// ── Pure helper: conversational chit-chat (Instant friendly replies) ────────
 function getConvoReply(text: string, isTe: boolean): string | null {
   const q = text.toLowerCase().trim();
 
-  // Greetings
+  // 1. Greetings
   if (
     /^(hello|hi|hey|good\s+morning|good\s+afternoon|good\s+evening)\b/.test(q) ||
-    /నమస్కారం|నమస్కార|హలో|హాయ్/.test(q)
+    /^(నమస్కారం|నమస్కార|హలో|హాయ్|నమస్తే)\b/.test(q)
   ) {
     return isTe
-      ? 'నమస్కారం! నేను FarmConnect AI సహాయకుడిని. మీకు వ్యవసాయం, పంట ధరలు లేదా ఆర్డర్ల గురించి ఎలాంటి సమాచారం కావాలి?'
-      : 'Hello! I am your FarmConnect AI Assistant. How can I help you today with crop prices, orders, or farming advice?';
+      ? 'నమస్కారం! నేను మీ FarmConnect AI సహాయకుడిని. మీకు వ్యవసాయం, పంట ధరలు లేదా ఏదైనా సలహా కావాలా? అడగండి!'
+      : 'Hello! I am your FarmConnect AI Assistant. How can I help you today with crops, market rates, or farming advice?';
   }
 
-  // How are you
-  if (/how are you/.test(q) || /మీరు ఎలా|బాగున్నారా/.test(q)) {
+  // 2. How are you
+  if (/how are you|how do you do/.test(q) || /మీరు ఎలా|బాగున్నారా|ఎలా ఉన్నారు/.test(q)) {
     return isTe
-      ? 'నేను చాలా బాగున్నాను, ధన్యవాదాలు! రైతులకు, వినియోగదారులకు సహాయం చేయడానికి సంతోషంగా ఉన్నాను. మీకు ఏ వివరాలు కావాలి?'
-      : "I am doing great, thank you! Ready to help you with fresh farm harvests and market rates. What's on your mind?";
+      ? 'నేను చాలా బాగున్నాను, ధన్యవాదాలు! రైతు సోదరులతో మాట్లాడటం నాకు చాలా ఇష్టం. మీ పొలం పనులు ఎలా సాగుతున్నాయి?'
+      : "I am doing great, thank you! Always happy to assist farmers and buyers. How are your farm activities going?";
   }
 
-  // Who are you / Identity
-  if (/your name|who are you|who made you/.test(q) || /మీ పేరు|నీ పేరు|ఎవరు మీరు/.test(q)) {
+  // 3. Who are you / Identity
+  if (/your name|who are you|who made you/.test(q) || /మీ పేరు|నీ పేరు|ఎవరు మీరు|నువ్వు ఎవరు/.test(q)) {
     return isTe
-      ? 'నా పేరు FarmConnect AI Assistant. నేను రైతులకు మరియు కొనుగోలుదారులకు సహాయం చేసే ఒక స్మార్ట్ అగ్రికల్చరల్ చాట్‌బాట్‌ను.'
-      : 'I am the FarmConnect AI Assistant — a smart agricultural companion helping farmers and consumers connect directly!';
+      ? 'నా పేరు FarmConnect AI Assistant. నేను రైతులకు మరియు వినియోగదారులకు మార్కెట్ ధరలు, పంట సలహాలు మరియు సూచనలు ఇచ్చే స్మార్ట్ వ్యవసాయ మిత్రుడిని!'
+      : 'I am the FarmConnect AI Assistant — your smart agricultural companion for crop prices, farming advice, and connecting directly with buyers!';
   }
 
-  // What can you do / Help
-  if (/what can you do|help me|what do you do|సహాయం|ఏం చేస్తావ్/.test(q)) {
+  // 4. What are you doing / Chit-chat
+  if (/what are you doing|what are you up to/.test(q) || /ఏం చేస్తున్నావ్|ఏం చేస్తున్నావు|ఏమి చేస్తున్నావ్/.test(q)) {
     return isTe
-      ? 'నేను మీకు APMC మండీ మార్కెట్ ధరలు చెప్పగలను, తాజా పంట ఉత్పత్తులను శోధించగలను, కొత్త పంట నమోదు చేయడంలో మరియు మీ ఆర్డర్లను ట్రాక్ చేయడంలో సహాయపడతాను.'
-      : 'I can tell you live APMC Mandi prices, search farm-fresh harvests, guide you to list new crops, and track your orders!';
+      ? 'రైతుల కోసం తాజా మండీ ధరలు మరియు వ్యవసాయ సలహాలను సిద్ధం చేస్తున్నాను! మీరు ఏ పంట సాగు చేస్తున్నారు?'
+      : 'I am tracking today’s live APMC market prices and preparing farming tips! What crops are you currently growing?';
   }
 
-  // Gratitude / OK
-  if (/^(thanks|thank you|thank u|great|awesome|perfect|good|nice)\b/.test(q) || /ధన్యవాదాలు|థాంక్స్|చాలా బాగుంది/.test(q)) {
+  // 5. I am a farmer / User introduction
+  if (/i am a farmer|i am farmer/.test(q) || /నేను రైతు|రైతుని|నాకు పొలం ఉంది/.test(q)) {
     return isTe
-      ? 'మీకు సహాయపడినందుకు చాలా సంతోషం! మీకు మరేదైనా సమాచారం కావాలంటే నిర్భయంగా అడగండి.'
-      : 'You are most welcome! Always happy to help. Let me know if you need anything else.';
+      ? 'మీలాంటి అన్నదాతలతో మాట్లాడటం మాకు గర్వకారణం! మీకు ఎలాంటి పంట సలహాలు లేదా మార్కెట్ సమాచారం కావాలో నన్ను అడగండి.'
+      : 'Honored to speak with a farmer! Farmers are the backbone of our nation. How can I assist with your crops or sales today?';
   }
 
-  // Farewell
+  // 6. Joke / Fun
+  if (/joke|funny/.test(q) || /జోక్|నవ్వు/.test(q)) {
+    return isTe
+      ? 'ఒక రైతును అడిగారట: "ఈ సంవత్సరం వర్షాలు ఎలా ఉన్నాయి?" అని. దానికి రైతు: "వర్షాలు చాలా క్రమశిక్షణగా ఉన్నాయి, కేవలం సెలవు రోజుల్లోనే వస్తున్నాయి!" అన్నారట! 😄'
+      : 'Why did the scarecrow win an award? Because he was outstanding in his field! 😄 Hope that brought a smile!';
+  }
+
+  // 7. Compliments
+  if (/you are good|you are great|nice|smart|i like you/.test(q) || /మంచివి|బాగున్నావ్|గొప్ప|చాలా బాగుంది/.test(q)) {
+    return isTe
+      ? 'చాలా ధన్యవాదాలు! మీ మాటలు నాకు ఎంతో ఉత్సాహాన్ని ఇచ్చాయి. మీకు సహాయపడటానికి నేను ఎల్లప్పుడూ ఇక్కడే ఉంటాను.'
+      : 'Thank you so much! That warms my heart. I am always here to support you with your agricultural needs.';
+  }
+
+  // 8. Gratitude / OK
+  if (/^(thanks|thank you|thank u|great|awesome|perfect|super)\b/.test(q) || /ధన్యవాదాలు|థాంక్స్|మంచిది|సరే/.test(q)) {
+    return isTe
+      ? 'మీకు స్వాగతం! వ్యవసాయం, విత్తనాలు, ఎరువులు లేదా అమ్మకాల గురించి మరేదైనా సలహా కావాలంటే అడగండి.'
+      : 'You are most welcome! Feel free to ask anytime for crop advice, seeds, fertilizers, or selling tips.';
+  }
+
+  // 9. Farewell
   if (/^(bye|goodbye|see you|good night)\b/.test(q) || /సెలవు|బై|మళ్ళీ కలుద్దాం/.test(q)) {
     return isTe
-      ? 'సెలవు! మీ రోజు శుభప్రదంగా గడవాలని ఆశిస్తున్నాను. మళ్లీ ఏదైనా అవసరమైతే నన్ను పిలవండి.'
-      : 'Goodbye! Wishing you a fruitful day ahead. Feel free to chat with me anytime.';
+      ? 'సెలవు! మీ పంటలు సమృద్ధిగా పండాలని ఆశిస్తున్నాను. మళ్లీ ఎప్పుడైనా మాట్లాడండి!'
+      : 'Goodbye! Wishing you a bountiful harvest and great profits. Chat with me anytime!';
   }
 
   return null;
 }
 
-// ── Pure helper: local farm fallback (when API is offline/unreachable) ───────
+// ── Pure helper: rich agricultural advises & suggestions ────────────────────
 function getLocalReply(text: string, isTe: boolean): { reply: string; action?: { type: string; param?: string } } {
   const q = text.toLowerCase();
 
+  // ── A. Pest & Disease Advice (పురుగులు & తెగుళ్లు) ──
+  if (q.includes('పురుగు') || q.includes('తెగులు') || q.includes('pest') || q.includes('disease') || q.includes('మందు') || q.includes('స్ప్రే')) {
+    if (q.includes('మిరప') || q.includes('chilli')) {
+      return {
+        reply: isTe
+          ? 'మిరపలో తామర పురుగులు లేదా బొబ్బర తెగులు నివారణకు: వేప నూనె (10,000 ppm) లీటరు నీటికి 3-5 మి.లీ కలిపి పిచికారీ చేయండి. తీవ్రత ఎక్కువగా ఉంటే డైఫెన్థియురాన్ లేదా ఎసిఫేట్ వాడండి.'
+          : 'For Chilli thrips and leaf curl: Spray Neem oil (10,000 ppm) at 3-5 ml/L. For severe infestation, apply Diafenthiuron or Acetamiprid under guidance.',
+      };
+    }
+    if (q.includes('టమాటా') || q.includes('tomato')) {
+      return {
+        reply: isTe
+          ? 'టమాటాలో కాయ తొలుచు పురుగు నివారణకు ఎకరానికి 5-8 లింగాకర్షక బుట్టలు (Pheromone traps) పెట్టండి. ఆకుమచ్చ తెగులుకు మాంకోజెబ్ 2.5 గ్రాములు లీటరు నీటికి కలిపి పిచికారీ చేయండి.'
+          : 'For Tomato fruit borer: Install 5-8 pheromone traps per acre. For early blight, spray Mancozeb at 2.5 g/L of water.',
+      };
+    }
+    if (q.includes('వరి') || q.includes('rice') || q.includes('paddy')) {
+      return {
+        reply: isTe
+          ? 'వరిలో కాండం తొలుచు పురుగు నివారణకు కార్టాప్ హైడ్రోక్లోరైడ్ 4G గుళికలు ఎకరానికి 8 కిలోలు చల్లండి. పొలంలో నీరు నిలిచేలా చూడండి.'
+          : 'For Paddy stem borer: Apply Cartap Hydrochloride 4G granules at 8 kg per acre with standing water.',
+      };
+    }
+    return {
+      reply: isTe
+        ? 'చీడపీడల నివారణకు ముందుగా వేప కషాయం లేదా జీవామృతం పిచికారీ చేయడం ఉత్తమం. ఏ పంటకు ఏ పురుగు సమస్య ఉందో వివరంగా చెబితే ఖచ్చితమైన సలహా ఇస్తాను.'
+        : 'For pest control, bio-solutions like Neem oil or Trichoderma are great first steps. Mention your specific crop and pest symptoms for exact recommendations.',
+    };
+  }
+
+  // ── B. Fertilizer & Nutrition Advice (ఎరువులు & నేల) ──
+  if (q.includes('ఎరువు') || q.includes('fertilizer') || q.includes('dap') || q.includes('యూరియా') || q.includes('urea') || q.includes('పోషక')) {
+    return {
+      reply: isTe
+        ? 'రసాయన ఎరువులతో పాటు పశువుల ఎరువు లేదా వర్మీకంపోస్ట్ వాడటం వలన నేల సారం పెరుగుతుంది. వరి లేదా మిరపకు నత్రజని (యూరియా) ఒకేసారి కాకుండా 3 దఫాలుగా వేయడం మంచిది.'
+        : 'Combine organic vermicompost with chemical fertilizers for soil health. Split Nitrogen (Urea) into 2-3 doses rather than applying all at once.',
+    };
+  }
+
+  // ── C. Irrigation & Water Advice (నీటి యాజమాన్యం) ──
+  if (q.includes('నీరు') || q.includes('water') || q.includes('సేద్యం') || q.includes('irrigation') || q.includes('డ్రిప్') || q.includes('drip')) {
+    return {
+      reply: isTe
+        ? 'టమాటా, మిరప, అరటి వంటి పంటలకు బిందు సేద్యం (డ్రిప్) వాడటం వలన 40-50% నీరు ఆదా అవుతుంది, కలుపు తగ్గుతుంది మరియు దిగుబడి 20-30% పెరుగుతుంది.'
+        : 'Drip irrigation saves 40-50% water, cuts weed growth, and increases crop yields by up to 25% for tomatoes, chillies, and bananas.',
+    };
+  }
+
+  // ── D. Selling & Profit Tips (మంచి ధర, లాభాలు) ──
+  if (q.includes('లాభం') || q.includes('ధర పొందడం') || q.includes('profit') || q.includes('sell') || q.includes('అమ్మకం') || q.includes('ఎలా అమ్మాలి')) {
+    return {
+      reply: isTe
+        ? 'మంచి లాభాల కోసం: పంటను గ్రేడింగ్ (A/B రకాలుగా వేరు చేయడం) చేసి FarmConnect లో నేరుగా వినియోగదారులకు లేదా హోల్‌సేలర్లకు అమ్మండి. దళారుల కమీషన్ లేకుండా అధిక ఆదాయం పొందవచ్చు!'
+        : 'To maximize profits: Grade your produce, check live APMC market rates, and list directly on FarmConnect to sell directly to buyers without middleman commissions!',
+      action: { type: 'NAVIGATE_ADD_PRODUCT' },
+    };
+  }
+
+  // ── E. Specific Crop Prices ──
   if (q.includes('టమాటా') || q.includes('tomato')) {
     return {
       reply: isTe
-        ? 'నేటి గుంటూరు మార్కెట్‌లో టమాటా సగటు ధర ₹34/కిలో (క్వింటాలుకు ₹3,400). లైవ్ మండీ ధరలు చూడడానికి కింద బటన్ నొక్కండి.'
+        ? 'నేటి గుంటూరు మార్కెట్‌లో టమాటా సగటు ధర ₹34/కిలో (క్వింటాలుకు ₹3,400). లైవ్ మండీ ధరల కోసం కింద బటన్ నొక్కండి.'
         : "Today's average tomato mandi rate is ₹34/kg (₹3,400/Quintal). Click below to view the live market dashboard.",
       action: { type: 'NAVIGATE_MARKET_PRICES', param: 'Tomato' },
     };
@@ -125,7 +205,7 @@ function getLocalReply(text: string, isTe: boolean): { reply: string; action?: {
   if (q.includes('add product') || q.includes('కొత్త పంట') || q.includes('జోడించు') || q.includes('upload')) {
     return {
       reply: isTe
-        ? 'కొత్త పంట నమోదు పేజీని తెరుస్తున్నాను. మీ ఉత్పత్తి వివరాలు అక్కడ జోడించండి.'
+        ? 'కొత్త పంట నమోదు పేజీని తెరుస్తున్నాను. మీ ఉత్పత్తి వివరాలు అక్కడ నమోదు చేయండి.'
         : 'Opening the crop upload page so you can list your harvest directly.',
       action: { type: 'NAVIGATE_ADD_PRODUCT' },
     };
@@ -135,7 +215,7 @@ function getLocalReply(text: string, isTe: boolean): { reply: string; action?: {
     return {
       reply: isTe
         ? 'మీ ఆర్డర్ల వివరాలు మరియు డెలివరీ స్థితిని తెరుస్తున్నాను.'
-        : 'Opening your orders and delivery tracking.',
+        : 'Opening your orders and delivery tracking timeline.',
       action: { type: 'NAVIGATE_ORDERS' },
     };
   }
@@ -189,12 +269,12 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const recRef             = useRef<any>(null);
   const wantListenRef      = useRef(false);
   const busyRef            = useRef(false);
-  const isSpeakingRef      = useRef(false);          // True while browser TTS is playing audio
-  const accumulatedTextRef = useRef('');             // Collects user utterance across continuous events
-  const silenceTimerRef    = useRef<any>(null);      // 3-second silence detector
+  const isSpeakingRef      = useRef(false);
+  const currentTextRef     = useRef('');             // Holds the current session transcript (NO DUPLICATION)
+  const silenceTimerRef    = useRef<any>(null);      // 2.4s silence detector
   const chatEndRef         = useRef<HTMLDivElement>(null);
 
-  // Live state refs (always freshest without re-binding recognition)
+  // Live state refs
   const langRef       = useRef(language);
   const roleRef       = useRef(role);
   const ttsRef        = useRef(ttsEnabled);
@@ -215,7 +295,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const speakText = (text: string) => {
     if (!ttsRef.current || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     try {
-      // 1. Immediately turn OFF and abort microphone so it NEVER hears itself!
+      // 1. Immediately turn OFF microphone so it NEVER hears itself!
       stopListeningInternal();
       isSpeakingRef.current = true;
 
@@ -231,7 +311,6 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       };
 
       utt.onend = () => {
-        // Small guard window after speech ends to prevent catching speaker reverb
         setTimeout(() => {
           isSpeakingRef.current = false;
         }, 500);
@@ -288,7 +367,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     const isTe = langRef.current === 'te';
     addMsg({ role: 'user', text: clean });
 
-    // 1. Instant conversational response for greetings & pleasantries
+    // 1. Instant conversational response for chit-chat & pleasantries
     const convo = getConvoReply(clean, isTe);
     if (convo) {
       addMsg({ role: 'assistant', text: convo });
@@ -298,7 +377,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       return;
     }
 
-    // 2. Call AI Assistant API (with conversational history)
+    // 2. Call AI Assistant API (with full multi-turn conversational context)
     const history = historyRef.current.slice(-6).map(m => ({ role: m.role, text: m.text }));
     try {
       const res = await fetch('/api/assistant', {
@@ -312,7 +391,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       speakText(reply);
     } catch (err) {
       console.warn('Assistant API fallback:', err);
-      // 3. Fallback to smart local agricultural response
+      // 3. Fallback to rich local agricultural advice
       const { reply, action } = getLocalReply(clean, isTe);
       addMsg({ role: 'assistant', text: reply, action });
       speakText(reply);
@@ -322,10 +401,9 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     }
   };
 
-  // Keep ref pointing to latest handler
   handleTextRef.current = handleUserText;
 
-  /* ─── Silence Detector & Speech Recognition Setup ──────────────────────── */
+  /* ─── Setup Speech Recognition Without Audio Duplication ───────────────── */
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -343,55 +421,43 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     };
 
     rec.onresult = (e: any) => {
-      // CRITICAL: If the assistant is speaking its answer out loud, IGNORE microphone audio completely!
+      // If assistant is currently speaking or processing, drop incoming audio immediately!
       if (isSpeakingRef.current || busyRef.current) {
         return;
       }
 
-      let interim = '';
-      let finalPiece = '';
-
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const r = e.results[i];
-        if (r.isFinal) {
-          let best = r[0].transcript;
-          for (let j = 1; j < r.length; j++) {
-            if (r[j].confidence > r[0].confidence) best = r[j].transcript;
-          }
-          finalPiece += ' ' + best;
-        } else {
-          interim += ' ' + r[0].transcript;
+      // Reconstruct the FULL transcript directly from e.results — NEVER APPEND TO OLD STATE!
+      // This completely eliminates "takes voice 2 or 3 times" duplication.
+      let fullTranscript = '';
+      for (let i = 0; i < e.results.length; i++) {
+        const item = e.results[i];
+        if (item && item[0]) {
+          fullTranscript += item[0].transcript + ' ';
         }
       }
 
-      if (finalPiece.trim()) {
-        accumulatedTextRef.current = (accumulatedTextRef.current + ' ' + finalPiece).trim();
-      }
+      const cleanTranscript = fullTranscript.trim();
+      if (!cleanTranscript) return;
 
-      const currentLiveDisplay = (accumulatedTextRef.current + ' ' + interim).trim();
-      if (currentLiveDisplay) {
-        setInterimText(currentLiveDisplay);
-      }
+      currentTextRef.current = cleanTranscript;
+      setInterimText(cleanTranscript);
 
-      // ── 3-Second Silence Timer:
-      // When the user speaks, start/reset timer. Once user is quiet for ~2.8 seconds:
-      // Turn OFF the mic and give the reply!
+      // Clear previous silence timer
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
       }
 
+      // Auto turn-off mic and send after ~2.4 seconds of silence
       silenceTimerRef.current = setTimeout(() => {
-        const spokenSentence = (accumulatedTextRef.current + ' ' + interim).trim();
-        if (spokenSentence && !isSpeakingRef.current && !busyRef.current) {
-          // 1. Immediately turn off the mic
-          stopListeningInternal();
+        const textToSend = currentTextRef.current.trim();
+        if (textToSend && !isSpeakingRef.current && !busyRef.current) {
+          currentTextRef.current = '';
           setInterimText('');
-          accumulatedTextRef.current = '';
-
-          // 2. Give the reply
-          handleTextRef.current(spokenSentence);
+          stopListeningInternal();
+          handleTextRef.current(textToSend);
         }
-      }, 2600); // 2.6 seconds of silence gives a natural, responsive turn
+      }, 2400);
     };
 
     rec.onerror = (e: any) => {
@@ -409,7 +475,6 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     };
 
     rec.onend = () => {
-      // Only restart if user actively wants to listen AND we are not speaking/processing
       if (wantListenRef.current && !isSpeakingRef.current && !busyRef.current) {
         setTimeout(() => {
           if (wantListenRef.current && recRef.current && !isSpeakingRef.current && !busyRef.current) {
@@ -453,15 +518,15 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   useEffect(() => {
     if (isOpen && historyRef.current.length === 0) {
       const txt = language === 'te'
-        ? 'నమస్కారం! నేను FarmConnect AI సహాయకుడిని. పంట ధరలు, ఆర్డర్లు, మార్కెట్ సమాచారం అడగండి. మైక్ నొక్కి మాట్లాడండి!'
-        : 'Hello! I am your FarmConnect AI Assistant. Ask me about crop prices, orders, or market info. Tap the mic and speak!';
+        ? 'నమస్కారం! నేను FarmConnect AI సహాయకుడిని. నాతో సరదాగా మాట్లాడవచ్చు లేదా పంట ధరలు, చీడపీడల నివారణ, ఎరువుల సలహాలు అడగవచ్చు. మైక్ నొక్కి మాట్లాడండి!'
+        : 'Hello! I am your FarmConnect AI Companion. Ask me for crop advice, market prices, farming tips, or just have a chat. Tap the mic and speak!';
       addMsg({ role: 'assistant', text: txt });
       speakText(txt);
     }
     if (!isOpen) {
       stopListeningInternal();
       setInterimText('');
-      accumulatedTextRef.current = '';
+      currentTextRef.current = '';
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
@@ -474,7 +539,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const startListening = () => {
     if (!recRef.current) { setBrowserSupported(false); return; }
 
-    // If assistant is currently talking, clicking mic interrupts speech (barge-in)!
+    // Interrupt assistant speech if active
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
@@ -483,7 +548,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     setErrorMsg('');
     setPermDenied(false);
     setInterimText('');
-    accumulatedTextRef.current = '';
+    currentTextRef.current = '';
     wantListenRef.current = true;
 
     try {
@@ -501,20 +566,20 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     }
   };
 
-  // User manually stops mic early before 3s timeout
+  // User manually stops mic early before 2.4s timeout
   const stopListeningManual = () => {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
     }
 
-    const pendingText = (accumulatedTextRef.current + ' ' + interimText).trim();
-    stopListeningInternal();
+    const textToSend = currentTextRef.current.trim() || interimText.trim();
+    currentTextRef.current = '';
     setInterimText('');
-    accumulatedTextRef.current = '';
+    stopListeningInternal();
 
-    if (pendingText) {
-      handleTextRef.current(pendingText);
+    if (textToSend && !isSpeakingRef.current && !busyRef.current) {
+      handleTextRef.current(textToSend);
     }
   };
 
@@ -531,18 +596,18 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   /* ─── Quick Chips ───────────────────────────────────────────────────────── */
   const quickCommands = language === 'te'
     ? [
-        { label: 'నమస్కారం 👋', query: 'నమస్కారం' },
-        { label: 'టమాటా ధర ఎంత?', query: 'టమాటా ధర ఎంత?' },
-        { label: 'నా ఆర్డర్లు', query: 'నా ఆర్డర్లు చూపించు' },
-        { label: 'కొత్త పంట జోడించు', query: 'కొత్త పంటను జోడించు' },
-        { label: 'మార్కెట్ ధరలు', query: 'నేటి మార్కెట్ ధరలు చూపించు' },
+        { label: 'నమస్కారం! బాగున్నారా? 👋', query: 'నమస్కారం! మీరు ఎలా ఉన్నారు?' },
+        { label: 'మిరపలో పురుగు నివారణ సలహా 🌶', query: 'మిరప పంటలో పురుగుల నివారణకు సలహా ఇవ్వండి' },
+        { label: 'టమాటా ధర ఎంత? 🍅', query: 'టమాటా ధర ఎంత?' },
+        { label: 'మంచి లాభం పొందడం ఎలా? 💡', query: 'పంటను మంచి ధరకు ఎలా అమ్మాలి?' },
+        { label: 'నేటి మార్కెట్ ధరలు 📊', query: 'నేటి మార్కెట్ ధరలు చూపించు' },
       ]
     : [
-        { label: 'Hello 👋', query: 'Hello' },
-        { label: 'Tomato price?', query: "What is today's tomato price?" },
-        { label: 'My orders', query: 'Show my orders' },
-        { label: 'Add product', query: 'Add a new product' },
-        { label: 'Market prices', query: "Show today's market prices" },
+        { label: 'Hello! How are you? 👋', query: 'Hello! How are you doing today?' },
+        { label: 'Chilli pest control tips 🌶', query: 'Give me advice for pest control in chilli' },
+        { label: 'Tomato price today? 🍅', query: "What is today's tomato price?" },
+        { label: 'How to maximize profits? 💡', query: 'How to get best price for my crops?' },
+        { label: 'Live market prices 📊', query: "Show today's market prices" },
       ];
 
   if (!isOpen) return null;
@@ -562,7 +627,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
             <div>
               <h3 className="font-bold text-base leading-tight">{t('voiceModalTitle')}</h3>
               <p className="text-xs text-emerald-100">
-                {language === 'te' ? 'తెలుగు & English — స్మార్ట్ AI చాట్‌బాట్' : 'Telugu & English — Smart AI Assistant'}
+                {language === 'te' ? 'తెలుగు & English — AI వ్యవసాయ మిత్రుడు & సలహాదారు' : 'Telugu & English — AI Agricultural Companion & Advisor'}
               </p>
             </div>
           </div>
@@ -636,7 +701,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                   </button>
                 )}
 
-                {/* Quick Follow-ups */}
+                {/* Quick Follow-up chips */}
                 {msg.role === 'assistant' && (msg.followUps?.length ?? 0) > 0 && (
                   <div className="flex flex-wrap gap-1 mt-0.5">
                     {msg.followUps!.slice(0, 2).map((fu, i) => (
@@ -655,7 +720,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
             </div>
           ))}
 
-          {/* Live speech transcription bubble */}
+          {/* Live speech transcription bubble (single clean text without duplication) */}
           {isListening && interimText && (
             <div className="flex gap-2 flex-row-reverse animate-fade-in">
               <div className="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center shrink-0 mt-1">
@@ -679,7 +744,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '160ms' }} />
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '320ms' }} />
                 <span className="text-xs text-stone-400 ml-1.5 font-medium">
-                  {language === 'te' ? 'ఆలోచిస్తున్నాను...' : 'Thinking...'}
+                  {language === 'te' ? 'సలహా ఆలోచిస్తున్నాను...' : 'Thinking advice...'}
                 </span>
               </div>
             </div>
@@ -746,8 +811,8 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                 onChange={(e) => setManualQuery(e.target.value)}
                 placeholder={
                   isListening
-                    ? (language === 'te' ? '🎤 వింటున్నాను... మాట్లాడి 3 సెకన్లు ఆగండి' : '🎤 Listening... speak & pause 3s to send')
-                    : (language === 'te' ? 'మాట్లాడండి లేదా టైప్ చేయండి...' : 'Speak or type your question...')
+                    ? (language === 'te' ? '🎤 వింటున్నాను... మాట్లాడి 2-3 సెకన్లు ఆగండి' : '🎤 Listening... speak & pause to send')
+                    : (language === 'te' ? 'నాతో మాట్లాడండి లేదా టైప్ చేయండి...' : 'Chat, ask advice or type here...')
                 }
                 disabled={isProcessing}
                 className="flex-1 bg-stone-100 rounded-xl px-4 py-2 text-sm text-stone-800 placeholder-stone-400 border border-transparent focus:border-emerald-500 focus:bg-white focus:outline-none transition-all disabled:opacity-60"
@@ -768,8 +833,8 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
               <span className="text-xs text-rose-600 font-semibold">
                 {language === 'te'
-                  ? 'వింటున్నాము — మాట్లాడటం ఆపిన 3 సెకన్లలో సమాధానం వస్తుంది'
-                  : 'Listening — stop speaking for 3 seconds to send'}
+                  ? 'వింటున్నాము — మాట్లాడటం ఆపిన 2-3 సెకన్లలో సమాధానం వస్తుంది'
+                  : 'Listening — stop speaking to automatically send'}
               </span>
               <div className="flex items-end gap-0.5 h-4">
                 {[1, 2, 3, 4].map(i => (
