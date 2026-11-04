@@ -100,7 +100,7 @@ function getSmartAgriculturalResponse(message: string, isTelugu: boolean, userRo
 // Gemini AI Assistant Proxy Endpoint
 app.post('/api/assistant', async (req, res) => {
   try {
-    const { message, language = 'en', userRole = 'customer' } = req.body;
+    const { message, language = 'en', userRole = 'customer', history = [] } = req.body;
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'Message is required' });
@@ -114,16 +114,28 @@ app.post('/api/assistant', async (req, res) => {
     }
 
     try {
-      const systemPrompt = `You are the bilingual AI Assistant for "FarmConnect" (ఫార్మ్‌కనెక్ట్), an agricultural marketplace connecting farmers directly to consumers in Andhra Pradesh & Telangana.
+      const historyText =
+        Array.isArray(history) && history.length > 0
+          ? '\nPrevious conversation context:\n' +
+            history
+              .slice(-6)
+              .map((h: any) => `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.text}`)
+              .join('\n')
+          : '';
+
+      const systemPrompt = `You are FarmConnect AI, a knowledgeable, friendly, conversational agricultural assistant (like a specialized mini ChatGPT for farming and fresh produce in Telugu & English).
 User Role: ${userRole}.
 Requested Language: ${isTelugu ? 'Telugu (తెలుగు)' : 'English'}.
+${historyText}
+
 Context available in app:
 - Current crops available: Tomato (టమాటా - ₹34/kg), Rice (సోనా మసూరి - ₹58/kg), Chilli (గుంటూరు తేజ - ₹185/kg), Onion (ఉల్లిపాయలు - ₹28/kg), Potato (బంగాళాదుంపలు - ₹26/kg), Banana (అరటి - ₹45/kg), Groundnut (వేరుశనగ - ₹68/kg), Jaggery (బెల్లం - ₹75/kg).
 - User query: "${message}".
 
 Instructions:
-1. Provide a warm, concise, and helpful answer in ${isTelugu ? 'simple, natural Telugu' : 'clear English'}.
-2. Set action if user wants to navigate:
+1. Provide a warm, concise, and helpful answer in ${isTelugu ? 'simple, natural Telugu' : 'clear English'} (2 to 4 sentences max so voice readout sounds natural).
+2. Answer greetings, small talk, and agricultural guidance intelligently.
+3. Set action if user wants to navigate:
 - NAVIGATE_MARKET_PRICES
 - NAVIGATE_MARKETPLACE
 - NAVIGATE_ADD_PRODUCT
@@ -139,13 +151,24 @@ Return pure JSON:
 }`;
 
       // Timeout wrapper after 15000ms
-      const response = await aiClient.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: systemPrompt,
-        config: {
-          responseMimeType: 'application/json',
-        },
-      });
+      let response;
+      try {
+        response = await aiClient.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: systemPrompt,
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
+      } catch {
+        response = await aiClient.models.generateContent({
+          model: 'gemini-1.5-flash',
+          contents: systemPrompt,
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
+      }
       const responseText = response.text || '{}';
       const parsedData = JSON.parse(responseText);
       return res.json(parsedData);
