@@ -1,5 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, Volume2, VolumeX, X, Sparkles, ArrowRight, Send, Bot, User, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Mic, MicOff, Volume2, VolumeX, X, Sparkles,
+  ArrowRight, Send, Bot, User, AlertCircle,
+} from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -18,6 +21,128 @@ interface ChatMessage {
   followUps?: string[];
 }
 
+// ─── Conversational greetings & chit-chat (instant, no API needed) ──────────
+function getConversationalReply(text: string, isTe: boolean): string | null {
+  const q = text.toLowerCase().trim();
+
+  // Greetings
+  if (/^(hello|hi|hey|good morning|good afternoon|good evening|howdy)\b/.test(q))
+    return isTe
+      ? 'నమస్కారం! నేను FarmConnect AI సహాయకుడిని. మీకు ఏ సహాయం కావాలి?'
+      : 'Hello! I am the FarmConnect AI Assistant. How can I help you today?';
+
+  if (/నమస్కారం|నమస్కార|హలో|హాయ్/.test(q))
+    return 'నమస్కారం! నేను FarmConnect AI సహాయకుడిని. మీకు ఏ సహాయం కావాలి?';
+
+  // How are you
+  if (/how are you|how do you do/.test(q))
+    return isTe
+      ? 'నేను బాగున్నాను, ధన్యవాదాలు! మీకు ఏ సహాయం చేయగలను?'
+      : "I'm doing great, thank you! How can I assist you?";
+
+  if (/మీరు ఎలా ఉన్నారు|మీరు బాగున్నారా/.test(q))
+    return 'నేను బాగున్నాను, ధన్యవాదాలు! మీకు ఏ సహాయం చేయగలను?';
+
+  // What is your name
+  if (/your name|who are you/.test(q))
+    return isTe
+      ? 'నా పేరు FarmConnect AI Assistant. నేను మీకు వ్యవసాయ సమాచారం, మార్కెట్ ధరలు, ఆర్డర్లు గురించి సహాయం చేస్తాను.'
+      : 'I am FarmConnect AI Assistant. I help with agricultural information, market prices, and orders.';
+
+  if (/మీ పేరు|నీ పేరు/.test(q))
+    return 'నా పేరు FarmConnect AI Assistant. నేను మీకు వ్యవసాయ సమాచారం, మార్కెట్ ధరలు, ఆర్డర్లు గురించి సహాయం చేస్తాను.';
+
+  // Thanks
+  if (/^(thanks|thank you|thank u|ok|okay|great|perfect|good)\b/.test(q))
+    return isTe
+      ? 'మీకు స్వాగతం! మరింత సహాయం కావాలంటే అడగండి.'
+      : 'You are welcome! Feel free to ask anything else.';
+
+  if (/ధన్యవాదాలు|థాంక్స్|సరే|సరి/.test(q))
+    return 'మీకు స్వాగతం! మరింత సహాయం కావాలంటే అడగండి.';
+
+  // Bye
+  if (/^(bye|goodbye|see you|good night)\b/.test(q))
+    return isTe ? 'సెలవు! మళ్లీ రండి.' : 'Goodbye! Have a great day.';
+
+  if (/సెలవు|బై/.test(q)) return 'సెలవు! మళ్లీ రండి.';
+
+  return null; // Not a conversational phrase — go to API
+}
+
+// ─── Local agricultural fallback (when API is unreachable) ──────────────────
+function getLocalFarmReply(text: string, isTe: boolean): { reply: string; action?: { type: string; param?: string } } {
+  const q = text.toLowerCase();
+
+  if (q.includes('టమాటా') || q.includes('tomato') || q.includes('price') || q.includes('ధర') || q.includes('mandi') || q.includes('రేట్'))
+    return {
+      reply: isTe
+        ? 'నేటి టమాటా సగటు ధర క్వింటాలుకు ₹3,400 (కిలోకు ₹34). మార్కెట్ ధరల పేజీ తెరవడానికి "పేజీకి వెళ్ళండి" నొక్కండి.'
+        : "Today's average tomato mandi price is ₹3,400/Quintal (~₹34/kg). Click 'Go to page' to view live market rates.",
+      action: { type: 'NAVIGATE_MARKET_PRICES', param: 'Tomato' },
+    };
+
+  if (q.includes('ఉల్లి') || q.includes('onion'))
+    return {
+      reply: isTe ? 'ఉల్లిపాయ ధర నేడు ₹28/కిలో.' : 'Onion price today is ₹28/kg.',
+      action: { type: 'NAVIGATE_MARKET_PRICES', param: 'Onion' },
+    };
+
+  if (q.includes('బంగాళాదుంప') || q.includes('potato'))
+    return {
+      reply: isTe ? 'బంగాళాదుంప ధర నేడు ₹26/కిలో.' : 'Potato price today is ₹26/kg.',
+      action: { type: 'NAVIGATE_MARKET_PRICES', param: 'Potato' },
+    };
+
+  if (q.includes('బియ్యం') || q.includes('rice') || q.includes('paddy'))
+    return {
+      reply: isTe
+        ? 'గోదావరి సోనా మసూరి బియ్యం ₹58/కిలో అందుబాటులో ఉంది.'
+        : 'Godavari Sona Masoori rice is available at ₹58/kg.',
+      action: { type: 'NAVIGATE_MARKETPLACE', param: 'rice' },
+    };
+
+  if (q.includes('మిరప') || q.includes('chilli') || q.includes('చిల్లి'))
+    return {
+      reply: isTe
+        ? 'గుంటూరు తేజ ఎర్ర మిరపకాయ ₹185/కిలో. APMC ధర ₹19,200/క్వింటల్.'
+        : 'Guntur Teja chilli at ₹185/kg. APMC price ₹19,200/Quintal.',
+      action: { type: 'NAVIGATE_MARKETPLACE', param: 'chilli' },
+    };
+
+  if (q.includes('కొత్త పంట') || q.includes('add product') || q.includes('జోడించు') || q.includes('upload'))
+    return {
+      reply: isTe ? 'కొత్త పంటను జోడించే పేజీ తెరవడానికి నొక్కండి.' : 'Click below to open the add new product page.',
+      action: { type: 'NAVIGATE_ADD_PRODUCT' },
+    };
+
+  if (q.includes('ఆర్డర్') || q.includes('order') || q.includes('orders'))
+    return {
+      reply: isTe ? 'మీ ఆర్డర్ల వివరాలు చూడడానికి నొక్కండి.' : 'Click below to view your orders.',
+      action: { type: 'NAVIGATE_ORDERS' },
+    };
+
+  if (q.includes('అమ్మకాల') || q.includes('sales') || q.includes('ఆదాయం') || q.includes('earnings'))
+    return {
+      reply: isTe ? 'మీ అమ్మకాల నివేదిక తెరవడానికి నొక్కండి.' : 'Click below to open your sales analytics.',
+      action: { type: 'NAVIGATE_FARMER_SALES' },
+    };
+
+  if (q.includes('మార్కెట్') || q.includes('market') || q.includes('ధరలు') || q.includes('prices'))
+    return {
+      reply: isTe ? 'లైవ్ మార్కెట్ ధరలు చూడడానికి నొక్కండి.' : 'Click below to view live market prices.',
+      action: { type: 'NAVIGATE_MARKET_PRICES' },
+    };
+
+  return {
+    reply: isTe
+      ? `మీరు అడిగిన "${text}" కోసం మార్కెట్‌లో వెతుకుతున్నాను.`
+      : `Searching marketplace for "${text}".`,
+    action: { type: 'NAVIGATE_MARKETPLACE', param: text },
+  };
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
 export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   isOpen,
   onClose,
@@ -34,49 +159,121 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const [browserSupported, setBrowserSupported] = useState(true);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
-  const [micPermission, setMicPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown');
+  const [permDenied, setPermDenied] = useState(false);
 
-  // Refs that stay in sync without needing state
-  const recognitionRef = useRef<any>(null);
-  const shouldListenRef = useRef(false);   // Source of truth for "should mic be active"
-  const isProcessingRef = useRef(false);   // Avoid processing same text twice
+  /* ── Stable refs (never go stale in callbacks) ── */
+  const recRef = useRef<any>(null);
+  const wantListenRef = useRef(false);
+  const busyRef = useRef(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const chatHistoryRef = useRef<ChatMessage[]>([]); // For use inside callbacks
+  const langRef = useRef(language);
+  const roleRef = useRef(role);
+  const ttsEnabledRef = useRef(ttsEnabled);
+  const chatHistoryRef = useRef<ChatMessage[]>([]);
 
-  // Keep chatHistoryRef in sync
-  useEffect(() => {
-    chatHistoryRef.current = chatHistory;
-  }, [chatHistory]);
+  // Keep refs in sync with latest values
+  useEffect(() => { langRef.current = language; }, [language]);
+  useEffect(() => { roleRef.current = role; }, [role]);
+  useEffect(() => { ttsEnabledRef.current = ttsEnabled; }, [ttsEnabled]);
+  useEffect(() => { chatHistoryRef.current = chatHistory; }, [chatHistory]);
 
-  // Auto scroll to bottom
+  // Auto-scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory, isProcessing, interimText]);
 
-  // Welcome message when modal first opens
-  useEffect(() => {
-    if (isOpen && chatHistoryRef.current.length === 0) {
-      const welcome: ChatMessage = {
-        id: 'welcome',
-        role: 'assistant',
-        text:
-          language === 'te'
-            ? 'నమస్కారం! నేను FarmConnect AI సహాయకుడిని. పంట ధరలు, ఆర్డర్లు, మార్కెట్ సమాచారం అడగండి. మైక్ నొక్కి తెలుగులో మాట్లాడండి!'
-            : 'Hello! I am the FarmConnect AI Assistant. Ask me about crop prices, orders, market info and more. Press the mic and speak!',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      setChatHistory([welcome]);
-    }
-    // Stop mic when modal closes
-    if (!isOpen) {
-      stopListeningInternal();
-    }
-  }, [isOpen]);
+  // ── TTS ─────────────────────────────────────────────────────────────────────
+  const speakText = (text: string) => {
+    if (!ttsEnabledRef.current) return;
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = langRef.current === 'te' ? 'te-IN' : 'en-IN';
+      utt.rate = 0.9;
+      utt.pitch = 1.0;
 
-  // ── Build & start a fresh SpeechRecognition instance ──────────────────────
-  const buildRecognition = useCallback(() => {
-    if (typeof window === 'undefined') return null;
+      const doSpeak = () => {
+        const voices = window.speechSynthesis.getVoices();
+        if (langRef.current === 'te' && voices.length > 0) {
+          const v =
+            voices.find((v) => v.lang === 'te-IN') ||
+            voices.find((v) => v.lang.startsWith('te')) ||
+            voices.find((v) => v.lang === 'hi-IN') ||
+            voices.find((v) => v.lang.startsWith('hi'));
+          if (v) utt.voice = v;
+        }
+        window.speechSynthesis.speak(utt);
+      };
+
+      if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.onvoiceschanged = null;
+          doSpeak();
+        };
+      } else {
+        doSpeak();
+      }
+    } catch (e) { console.warn('TTS:', e); }
+  };
+
+  // ── Add message helper ───────────────────────────────────────────────────────
+  const addMsg = (msg: Omit<ChatMessage, 'id' | 'time'>) => {
+    const m: ChatMessage = {
+      ...msg,
+      id: `${Date.now()}-${Math.random()}`,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setChatHistory((prev) => [...prev, m]);
+    return m;
+  };
+
+  // ── Process a user utterance ─────────────────────────────────────────────────
+  const handleUserText = async (text: string) => {
+    if (!text.trim() || busyRef.current) return;
+    busyRef.current = true;
+    setIsProcessing(true);
+
+    const isTe = langRef.current === 'te';
+
+    // Add user bubble
+    addMsg({ role: 'user', text });
+
+    // 1️⃣ Instant conversational reply (no network)
+    const convo = getConversationalReply(text, isTe);
+    if (convo) {
+      addMsg({ role: 'assistant', text: convo });
+      speakText(convo);
+      busyRef.current = false;
+      setIsProcessing(false);
+      return;
+    }
+
+    // 2️⃣ Call AI API
+    const history = chatHistoryRef.current.slice(-6).map((m) => ({ role: m.role, text: m.text }));
+    try {
+      const res = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, language: langRef.current, userRole: roleRef.current, history }),
+      });
+      const data = await res.json();
+      const reply = data.reply || (isTe ? 'మీ అభ్యర్థన అర్థమైంది.' : 'Understood.');
+      addMsg({ role: 'assistant', text: reply, action: data.action, followUps: data.suggestedFollowUps || [] });
+      speakText(reply);
+    } catch {
+      // 3️⃣ Offline local fallback
+      const { reply, action } = getLocalFarmReply(text, isTe);
+      addMsg({ role: 'assistant', text: reply, action });
+      speakText(reply);
+    } finally {
+      busyRef.current = false;
+      setIsProcessing(false);
+    }
+  };
+
+  // ── Build recognition (called once; reused) ──────────────────────────────────
+  const buildRec = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) return null;
 
@@ -84,81 +281,45 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     rec.continuous = true;
     rec.interimResults = true;
     rec.maxAlternatives = 3;
-    rec.lang = language === 'te' ? 'te-IN' : 'en-IN';
 
-    rec.onstart = () => {
-      setIsListening(true);
-      setErrorMsg('');
-    };
+    rec.onstart = () => { setIsListening(true); setErrorMsg(''); };
 
-    rec.onresult = (event: any) => {
+    rec.onresult = (e: any) => {
       let interim = '';
-      let finalText = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const res = event.results[i];
-        if (res.isFinal) {
-          finalText += res[0].transcript;
-        } else {
-          interim += res[0].transcript;
-        }
+      let final = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) final += e.results[i][0].transcript;
+        else interim += e.results[i][0].transcript;
       }
       if (interim) setInterimText(interim);
-      if (finalText.trim()) {
+      if (final.trim()) {
         setInterimText('');
-        // Guard: do not process while already processing
-        if (!isProcessingRef.current) {
-          processUserMessage(finalText.trim());
-        }
+        handleUserText(final.trim()); // always latest via closure-free call
       }
     };
 
-    rec.onerror = (event: any) => {
-      const err = event.error as string;
-      if (err === 'not-allowed' || err === 'service-not-allowed') {
-        setMicPermission('denied');
-        setErrorMsg(
-          language === 'te'
-            ? '❌ మైక్రోఫోన్ అనుమతి నిరాకరించబడింది. బ్రౌజర్ సెట్టింగ్స్‌లో అనుమతి ఇవ్వండి.'
-            : '❌ Microphone permission denied. Please allow microphone access in your browser settings.'
-        );
-        shouldListenRef.current = false;
+    rec.onerror = (e: any) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        setPermDenied(true);
+        wantListenRef.current = false;
         setIsListening(false);
-      } else if (err === 'audio-capture') {
-        setErrorMsg(
-          language === 'te'
-            ? '❌ మైక్రోఫోన్ కనుగొనబడలేదు. మైక్ కనెక్ట్ ఉందో చూడండి.'
-            : '❌ No microphone found. Please connect a microphone.'
-        );
-        shouldListenRef.current = false;
+      } else if (e.error === 'audio-capture') {
+        setErrorMsg(langRef.current === 'te' ? '❌ మైక్రోఫోన్ కనుగొనబడలేదు.' : '❌ No microphone found.');
+        wantListenRef.current = false;
         setIsListening(false);
-      } else if (err === 'network') {
-        setErrorMsg(
-          language === 'te'
-            ? '⚠ నెట్‌వర్క్ సమస్య. ఇంటర్నెట్ కనెక్షన్ తనిఖీ చేయండి.'
-            : '⚠ Network error. Check your internet connection.'
-        );
-      } else if (err !== 'no-speech' && err !== 'aborted') {
-        console.warn('SpeechRecognition error:', err);
-        setErrorMsg(
-          language === 'te'
-            ? `⚠ గుర్తించడంలో సమస్య (${err}). మళ్లీ ప్రయత్నించండి.`
-            : `⚠ Recognition error (${err}). Please try again.`
-        );
+      } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
+        console.warn('SpeechRecognition error:', e.error);
       }
     };
 
     rec.onend = () => {
-      // If we still WANT to listen, restart automatically
-      if (shouldListenRef.current) {
+      if (wantListenRef.current) {
+        // keep alive — restart after tiny pause
         setTimeout(() => {
-          if (shouldListenRef.current && recognitionRef.current) {
-            try {
-              recognitionRef.current.start();
-            } catch (_) {
-              // Recognition already started, ignore
-            }
+          if (wantListenRef.current && recRef.current) {
+            try { recRef.current.start(); } catch (_) {}
           }
-        }, 150);
+        }, 200);
       } else {
         setIsListening(false);
         setInterimText('');
@@ -166,224 +327,77 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     };
 
     return rec;
+  };
+
+  // ── Initialise recognition once on mount ────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const rec = buildRec();
+    if (!rec) { setBrowserSupported(false); return; }
+    recRef.current = rec;
+    return () => { try { rec.abort(); } catch (_) {} };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Update recognition language when it changes ─────────────────────────────
+  useEffect(() => {
+    if (recRef.current) {
+      recRef.current.lang = language === 'te' ? 'te-IN' : 'en-IN';
+    }
   }, [language]);
 
-  // (Re)build recognition when language changes
+  // ── Welcome + cleanup on open/close ─────────────────────────────────────────
   useEffect(() => {
-    // Tear down old instance
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (_) {}
+    if (isOpen && chatHistoryRef.current.length === 0) {
+      const txt = language === 'te'
+        ? 'నమస్కారం! నేను FarmConnect AI సహాయకుడిని. పంట ధరలు, ఆర్డర్లు, మార్కెట్ సమాచారం అడగండి. మైక్ నొక్కి మాట్లాడండి!'
+        : 'Hello! I am the FarmConnect AI Assistant. Ask me anything — crop prices, orders, market info. Press the mic and speak!';
+      addMsg({ role: 'assistant', text: txt });
+      speakText(txt);
     }
-
-    const rec = buildRecognition();
-    if (!rec) {
-      setBrowserSupported(false);
-      return;
+    if (!isOpen) {
+      wantListenRef.current = false;
+      setIsListening(false);
+      setInterimText('');
+      try { recRef.current?.stop(); } catch (_) {}
     }
-    recognitionRef.current = rec;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
-    // If we were listening before the language switched, restart with new lang
-    if (shouldListenRef.current) {
-      setTimeout(() => {
-        try { recognitionRef.current?.start(); } catch (_) {}
-      }, 200);
-    }
-
-    return () => {
-      try { rec.abort(); } catch (_) {}
-    };
-  }, [language, buildRecognition]);
-
-  // ── TTS helper ─────────────────────────────────────────────────────────────
-  const speakText = useCallback(
-    (text: string) => {
-      if (!ttsEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-      try {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = language === 'te' ? 'te-IN' : 'en-IN';
-        utterance.rate = 0.88;
-        utterance.pitch = 1.0;
-
-        const trySpeak = () => {
-          const voices = window.speechSynthesis.getVoices();
-          if (language === 'te' && voices.length > 0) {
-            const teVoice =
-              voices.find((v) => v.lang === 'te-IN') ||
-              voices.find((v) => v.lang.startsWith('te')) ||
-              voices.find((v) => v.lang === 'hi-IN') ||
-              voices.find((v) => v.lang.startsWith('hi'));
-            if (teVoice) utterance.voice = teVoice;
-          }
-          window.speechSynthesis.speak(utterance);
-        };
-
-        // Voices might not be loaded yet — wait for them
-        if (window.speechSynthesis.getVoices().length === 0) {
-          window.speechSynthesis.onvoiceschanged = () => {
-            window.speechSynthesis.onvoiceschanged = null;
-            trySpeak();
-          };
-        } else {
-          trySpeak();
-        }
-      } catch (e) {
-        console.warn('TTS error:', e);
-      }
-    },
-    [ttsEnabled, language]
-  );
-
-  // ── Mic control ────────────────────────────────────────────────────────────
-  const stopListeningInternal = () => {
-    shouldListenRef.current = false;
-    setIsListening(false);
-    setInterimText('');
-    try { recognitionRef.current?.stop(); } catch (_) {}
-  };
-
+  // ── Mic start / stop ─────────────────────────────────────────────────────────
   const startListening = async () => {
-    if (!recognitionRef.current) {
-      setBrowserSupported(false);
-      return;
-    }
+    if (!recRef.current) { setBrowserSupported(false); return; }
     setErrorMsg('');
+    setPermDenied(false);
 
-    // Request microphone permission explicitly first
+    // Explicitly request mic permission
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
-      setMicPermission('granted');
-    } catch (err: any) {
-      setMicPermission('denied');
-      setErrorMsg(
-        language === 'te'
-          ? '❌ మైక్రోఫోన్ అనుమతి నిరాకరించబడింది. బ్రౌజర్ లో అనుమతి ఇవ్వండి మరియు మళ్లీ ప్రయత్నించండి.'
-          : '❌ Microphone access denied. Please allow microphone in your browser and try again.'
-      );
+    } catch {
+      setPermDenied(true);
       return;
     }
 
-    // Set the desire flag BEFORE calling start so onend can restart
-    shouldListenRef.current = true;
+    wantListenRef.current = true;
     try {
-      recognitionRef.current.lang = language === 'te' ? 'te-IN' : 'en-IN';
-      recognitionRef.current.start();
+      recRef.current.lang = language === 'te' ? 'te-IN' : 'en-IN';
+      recRef.current.start();
       setIsListening(true);
     } catch (e: any) {
-      if (e?.message?.includes('already started')) {
-        // Already running — that's fine
-        setIsListening(true);
+      if (!String(e).includes('already started')) {
+        wantListenRef.current = false;
+        setErrorMsg(language === 'te' ? '⚠ మైక్ ప్రారంభించడంలో సమస్య.' : '⚠ Could not start mic. Try again.');
       } else {
-        shouldListenRef.current = false;
-        console.warn('Recognition start error:', e);
-        setErrorMsg(
-          language === 'te'
-            ? '⚠ మైక్ ప్రారంభించడంలో సమస్య. మళ్లీ నొక్కండి.'
-            : '⚠ Could not start microphone. Please tap again.'
-        );
+        setIsListening(true); // already running, that's fine
       }
     }
   };
 
-  const stopListening = () => stopListeningInternal();
-
-  // ── Chat helpers ───────────────────────────────────────────────────────────
-  const addMessage = (msg: Omit<ChatMessage, 'id' | 'time'>): ChatMessage => {
-    const newMsg: ChatMessage = {
-      ...msg,
-      id: Date.now().toString() + Math.random(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    setChatHistory((prev) => [...prev, newMsg]);
-    return newMsg;
-  };
-
-  const processUserMessage = async (text: string) => {
-    if (!text.trim()) return;
-    if (isProcessingRef.current) return;
-    isProcessingRef.current = true;
-    setIsProcessing(true);
-
-    addMessage({ role: 'user', text });
-
-    // Build history context from ref (safe inside async callback)
-    const historyContext = chatHistoryRef.current.slice(-6).map((m) => ({
-      role: m.role,
-      text: m.text,
-    }));
-
-    try {
-      const response = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, language, userRole: role, history: historyContext }),
-      });
-
-      const data = await response.json();
-      const replyText =
-        data.reply ||
-        (language === 'te' ? 'మీ అభ్యర్థన అర్థమైంది.' : 'Understood your request.');
-
-      addMessage({
-        role: 'assistant',
-        text: replyText,
-        action: data.action,
-        followUps: data.suggestedFollowUps || [],
-      });
-
-      speakText(replyText);
-    } catch (error) {
-      console.warn('API error, falling back to local intent:', error);
-      handleLocalFallback(text);
-    } finally {
-      isProcessingRef.current = false;
-      setIsProcessing(false);
-    }
-  };
-
-  const handleLocalFallback = (text: string) => {
-    const q = text.toLowerCase();
-    const isTe = language === 'te';
-    let localReply = '';
-    let action: ChatMessage['action'];
-
-    if (q.includes('టమాటా') || q.includes('tomato') || q.includes('ధర') || q.includes('price') || q.includes('mandi') || q.includes('మార్కెట్')) {
-      localReply = isTe
-        ? 'నేటి టమాటా సగటు మార్కెట్ ధర క్వింటాలుకు ₹3,400 (కిలోకు సుమారు ₹34). మార్కెట్ ధరల పేజీ తెరవడానికి కింద బటన్ నొక్కండి.'
-        : "Today's average modal tomato mandi price is ₹3,400/Quintal (~₹34/kg). Click below to view the live market price dashboard.";
-      action = { type: 'NAVIGATE_MARKET_PRICES', param: 'Tomato' };
-    } else if (q.includes('కొత్త పంట') || q.includes('add product') || q.includes('జోడించు') || q.includes('అప్లోడ్')) {
-      localReply = isTe ? 'కొత్త వ్యవసాయ ఉత్పత్తి చేర్చే పేజీకి వెళ్ళడానికి నొక్కండి.' : 'Click below to open the new agricultural crop upload form.';
-      action = { type: 'NAVIGATE_ADD_PRODUCT' };
-    } else if (q.includes('ఆర్డర్') || q.includes('order') || q.includes('ట్రాక్') || q.includes('track')) {
-      localReply = isTe ? 'మీ ఆర్డర్ల వివరాలు చూడడానికి నొక్కండి.' : 'Click below to view your current orders and tracking.';
-      action = { type: 'NAVIGATE_ORDERS' };
-    } else if (q.includes('బియ్యం') || q.includes('rice')) {
-      localReply = isTe ? 'స్వచ్ఛమైన గోదావరి బియ్యం చూడడానికి నొక్కండి.' : 'Click below to see direct-from-farm single-origin rice products.';
-      action = { type: 'NAVIGATE_MARKETPLACE', param: 'rice' };
-    } else if (q.includes('మిరప') || q.includes('chilli') || q.includes('తేజ')) {
-      localReply = isTe ? 'గుంటూరు తేజ మిరపకాయల వివరాలు చూడడానికి నొక్కండి.' : 'Click below to see authentic Guntur Teja dried chillies.';
-      action = { type: 'NAVIGATE_MARKETPLACE', param: 'chilli' };
-    } else if (q.includes('అమ్మకాల') || q.includes('sales') || q.includes('ఆదాయం') || q.includes('earnings')) {
-      localReply = isTe ? 'మీ అమ్మకాలు మరియు ఆదాయ నివేదిక తెరవడానికి నొక్కండి.' : 'Click below to open your farm sales analytics report.';
-      action = { type: 'NAVIGATE_FARMER_SALES' };
-    } else {
-      localReply = isTe
-        ? `మీరు అడిగిన "${text}" కోసం మార్కెట్‌లో వెతికాను. కింద బటన్ నొక్కి ఫలితాలు చూడండి.`
-        : `I searched for "${text}" in the marketplace. Click below to see results.`;
-      action = { type: 'NAVIGATE_MARKETPLACE', param: text };
-    }
-
-    addMessage({ role: 'assistant', text: localReply, action });
-    speakText(localReply);
-  };
-
-  const handleManualSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (manualQuery.trim() && !isProcessingRef.current) {
-      processUserMessage(manualQuery.trim());
-      setManualQuery('');
-    }
+  const stopListening = () => {
+    wantListenRef.current = false;
+    setIsListening(false);
+    setInterimText('');
+    try { recRef.current?.stop(); } catch (_) {}
   };
 
   const handleNavigate = (action?: ChatMessage['action']) => {
@@ -395,22 +409,21 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     else if (action.type === 'NAVIGATE_FARMER_SALES') onNavigate('farmer-sales');
   };
 
-  const quickCommands =
-    language === 'te'
-      ? [
-          { label: 'టమాటా ధర ఎంత?', query: 'టమాటా ధర ఎంత?' },
-          { label: 'కొత్త పంటను జోడించు', query: 'కొత్త పంటను జోడించు' },
-          { label: 'నా ఆర్డర్లు చూపించు', query: 'నా ఆర్డర్లు చూపించు' },
-          { label: 'బియ్యం ఉత్పత్తులు', query: 'బియ్యం ఉత్పత్తులను చూపించు' },
-          { label: 'నేటి మార్కెట్ ధరలు', query: 'నేటి మార్కెట్ ధరలు చూపించు' },
-        ]
-      : [
-          { label: 'Tomato price?', query: "What is today's tomato price?" },
-          { label: 'Add new product', query: 'Add a new product' },
-          { label: 'Show my orders', query: 'Show my orders' },
-          { label: 'Search rice', query: 'Show rice products' },
-          { label: 'Market prices', query: "Show today's market prices" },
-        ];
+  const quickCommands = language === 'te'
+    ? [
+        { label: 'నమస్కారం', query: 'నమస్కారం' },
+        { label: 'టమాటా ధర ఎంత?', query: 'టమాటా ధర ఎంత?' },
+        { label: 'నా ఆర్డర్లు', query: 'నా ఆర్డర్లు చూపించు' },
+        { label: 'కొత్త పంట జోడించు', query: 'కొత్త పంటను జోడించు' },
+        { label: 'మార్కెట్ ధరలు', query: 'నేటి మార్కెట్ ధరలు చూపించు' },
+      ]
+    : [
+        { label: 'Hello!', query: 'Hello' },
+        { label: 'Tomato price?', query: "What is today's tomato price?" },
+        { label: 'My orders', query: 'Show my orders' },
+        { label: 'Add product', query: 'Add a new product' },
+        { label: 'Market prices', query: "Show today's market prices" },
+      ];
 
   if (!isOpen) return null;
 
@@ -436,20 +449,18 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setTtsEnabled(!ttsEnabled)}
-              title={ttsEnabled ? 'Mute Audio' : 'Enable Audio'}
+              onClick={() => setTtsEnabled((v) => !v)}
+              title={ttsEnabled ? 'Mute' : 'Unmute'}
               className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
             >
               {ttsEnabled ? <Volume2 className="w-4 h-4 text-emerald-200" /> : <VolumeX className="w-4 h-4 text-white/60" />}
             </button>
-
             <button
               onClick={() => setLanguage(language === 'en' ? 'te' : 'en')}
               className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white/15 hover:bg-white/25 border border-white/20 text-white transition-colors"
             >
               {language === 'en' ? 'తెలుగు' : 'English'}
             </button>
-
             <button onClick={onClose} className="p-1.5 rounded-full hover:bg-white/20 transition-colors text-white/80 hover:text-white">
               <X className="w-5 h-5" />
             </button>
@@ -457,34 +468,34 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
         </div>
 
         {/* ── Mic permission banner ── */}
-        {micPermission === 'denied' && (
+        {permDenied && (
           <div className="px-4 py-3 bg-red-50 border-b border-red-200 flex items-start gap-2 text-sm text-red-800 shrink-0">
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-red-600" />
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-red-500" />
             <div>
               <strong>{language === 'te' ? 'మైక్రోఫోన్ అనుమతి అవసరం' : 'Microphone Permission Required'}</strong>
-              <p className="text-xs mt-0.5">
+              <p className="text-xs mt-0.5 text-red-700">
                 {language === 'te'
-                  ? 'URL బార్ లో 🔒 ఐకాన్ నొక్కి → Site Settings → Microphone → Allow చేయండి. తర్వాత పేజీ రీలోడ్ చేయండి.'
-                  : 'Click the 🔒 icon in your URL bar → Site Settings → Microphone → Allow. Then reload the page.'}
+                  ? 'URL బార్ లో 🔒 నొక్కి → Site Settings → Microphone → Allow → పేజీ రీలోడ్ చేయండి.'
+                  : 'Click 🔒 in URL bar → Site Settings → Microphone → Allow → Reload page.'}
               </p>
             </div>
           </div>
         )}
 
-        {/* ── Chat messages ── */}
+        {/* ── Chat area ── */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-stone-50">
           {chatHistory.map((msg) => (
             <div key={msg.id} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-              <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-white mt-1
-                ${msg.role === 'user' ? 'bg-emerald-600' : 'bg-teal-700'}`}>
+              <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-white mt-1 ${msg.role === 'user' ? 'bg-emerald-600' : 'bg-teal-700'}`}>
                 {msg.role === 'user' ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
               </div>
 
               <div className={`max-w-[80%] flex flex-col gap-1.5 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm
-                  ${msg.role === 'user'
+                <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                  msg.role === 'user'
                     ? 'bg-emerald-600 text-white rounded-tr-sm'
-                    : 'bg-white border border-stone-200 text-stone-800 rounded-tl-sm'}`}>
+                    : 'bg-white border border-stone-200 text-stone-800 rounded-tl-sm'
+                }`}>
                   {msg.text}
                 </div>
 
@@ -498,12 +509,12 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                   </button>
                 )}
 
-                {msg.role === 'assistant' && msg.followUps && msg.followUps.length > 0 && (
+                {msg.role === 'assistant' && (msg.followUps?.length ?? 0) > 0 && (
                   <div className="flex flex-wrap gap-1 mt-0.5">
-                    {msg.followUps.slice(0, 2).map((fu, i) => (
+                    {msg.followUps!.slice(0, 2).map((fu, i) => (
                       <button
                         key={i}
-                        onClick={() => processUserMessage(fu)}
+                        onClick={() => handleUserText(fu)}
                         className="text-xs bg-stone-100 hover:bg-emerald-50 text-stone-600 hover:text-emerald-700 border border-stone-200 hover:border-emerald-300 rounded-full px-2.5 py-1 transition-all"
                       >
                         {fu}
@@ -517,22 +528,20 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
             </div>
           ))}
 
-          {/* Live interim transcript */}
+          {/* Live interim speech bubble */}
           {isListening && interimText && (
             <div className="flex gap-2 flex-row-reverse">
               <div className="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center shrink-0 mt-1">
                 <User className="w-3.5 h-3.5 text-white" />
               </div>
-              <div className="max-w-[80%]">
-                <div className="px-4 py-2.5 rounded-2xl rounded-tr-sm bg-emerald-100 text-emerald-800 text-sm italic border border-emerald-200">
-                  {interimText}
-                  <span className="inline-block w-1 h-3.5 bg-emerald-600 ml-1 animate-pulse rounded-sm" />
-                </div>
+              <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-tr-sm bg-emerald-100 text-emerald-800 text-sm italic border border-emerald-200">
+                {interimText}
+                <span className="inline-block w-1 h-3.5 bg-emerald-600 ml-1 animate-pulse rounded-sm" />
               </div>
             </div>
           )}
 
-          {/* Processing indicator */}
+          {/* Thinking dots */}
           {isProcessing && (
             <div className="flex gap-2">
               <div className="w-7 h-7 rounded-full bg-teal-700 flex items-center justify-center shrink-0 mt-1">
@@ -549,13 +558,13 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
           <div ref={chatEndRef} />
         </div>
 
-        {/* ── Quick chips ── */}
+        {/* ── Quick command chips ── */}
         <div className="px-4 pt-2 pb-1 bg-white border-t border-stone-100 shrink-0">
           <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
             {quickCommands.map((item, idx) => (
               <button
                 key={idx}
-                onClick={() => processUserMessage(item.query)}
+                onClick={() => handleUserText(item.query)}
                 disabled={isProcessing}
                 className="text-xs whitespace-nowrap bg-stone-100 hover:bg-emerald-50 text-stone-700 hover:text-emerald-800 border border-stone-200 hover:border-emerald-300 rounded-full px-3 py-1.5 font-medium transition-all shrink-0 disabled:opacity-50"
               >
@@ -565,33 +574,26 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
           </div>
         </div>
 
-        {/* ── Error message ── */}
-        {errorMsg && !micPermission.includes('denied') && (
+        {/* ── Error bar ── */}
+        {errorMsg && !permDenied && (
           <div className="px-4 py-2 bg-amber-50 border-t border-amber-100 text-xs text-amber-800 flex items-center gap-1.5 shrink-0">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
             {errorMsg}
           </div>
         )}
 
-        {/* ── Input bar ── */}
+        {/* ── Bottom input bar ── */}
         <div className="px-4 py-3 bg-white border-t border-stone-100 shrink-0">
           <div className="flex items-center gap-2">
             {/* Mic button */}
             <button
               onClick={isListening ? stopListening : startListening}
-              disabled={!browserSupported || micPermission === 'denied'}
-              title={
-                micPermission === 'denied'
-                  ? 'Microphone permission denied'
-                  : isListening
-                  ? 'Stop listening'
-                  : 'Start voice input'
-              }
+              disabled={!browserSupported || permDenied}
               className={`shrink-0 w-11 h-11 rounded-full flex items-center justify-center shadow transition-all select-none
                 ${isListening
-                  ? 'bg-rose-600 hover:bg-rose-700 text-white scale-110 shadow-rose-300'
-                  : micPermission === 'denied'
-                  ? 'bg-stone-300 text-stone-500 cursor-not-allowed'
+                  ? 'bg-rose-600 hover:bg-rose-700 text-white scale-110 shadow-rose-200'
+                  : permDenied
+                  ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white hover:scale-105 active:scale-95'
                 }`}
             >
@@ -599,18 +601,15 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
             </button>
 
             {/* Text input */}
-            <form onSubmit={handleManualSubmit} className="flex-1 flex gap-2">
+            <form onSubmit={(e) => { e.preventDefault(); if (manualQuery.trim()) { handleUserText(manualQuery.trim()); setManualQuery(''); } }} className="flex-1 flex gap-2">
               <input
-                ref={inputRef}
                 type="text"
                 value={manualQuery}
                 onChange={(e) => setManualQuery(e.target.value)}
                 placeholder={
                   isListening
-                    ? language === 'te' ? '🎤 వింటున్నాను...' : '🎤 Listening...'
-                    : language === 'te'
-                    ? 'మాట్లాడండి లేదా టైప్ చేయండి...'
-                    : 'Speak or type your question...'
+                    ? (language === 'te' ? '🎤 వింటున్నాను...' : '🎤 Listening...')
+                    : (language === 'te' ? 'మాట్లాడండి లేదా టైప్ చేయండి...' : 'Speak or type a question...')
                 }
                 disabled={isProcessing}
                 className="flex-1 bg-stone-100 rounded-xl px-4 py-2 text-sm text-stone-800 placeholder-stone-400 border border-transparent focus:border-emerald-500 focus:bg-white focus:outline-none transition-all disabled:opacity-60"
@@ -618,7 +617,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
               <button
                 type="submit"
                 disabled={!manualQuery.trim() || isProcessing}
-                className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white px-3 py-2 rounded-xl text-sm font-semibold transition-colors"
+                className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white px-3 py-2 rounded-xl transition-colors"
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -629,17 +628,13 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
           {isListening && (
             <div className="mt-2 flex items-center justify-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
-              <p className="text-xs text-rose-600 font-semibold">
+              <span className="text-xs text-rose-600 font-semibold">
                 {language === 'te' ? 'వింటున్నాను — స్పష్టంగా మాట్లాడండి' : 'Listening — speak clearly'}
-              </p>
-              {/* Live waveform dots */}
+              </span>
               <div className="flex items-end gap-0.5 h-4">
                 {[1, 2, 3, 4].map((i) => (
-                  <span
-                    key={i}
-                    className="w-1 bg-rose-400 rounded-full animate-bounce"
-                    style={{ height: `${8 + i * 3}px`, animationDelay: `${i * 80}ms` }}
-                  />
+                  <span key={i} className="w-1 bg-rose-400 rounded-full animate-bounce"
+                    style={{ height: `${8 + i * 3}px`, animationDelay: `${i * 80}ms` }} />
                 ))}
               </div>
             </div>
@@ -647,9 +642,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 
           {!browserSupported && (
             <p className="text-xs text-amber-700 mt-1.5 text-center">
-              {language === 'te'
-                ? 'మీ బ్రౌజర్ మైక్‌కు మద్దతు ఇవ్వడం లేదు. Chrome బ్రౌజర్ వాడండి.'
-                : 'Voice not supported in this browser. Please use Chrome.'}
+              {language === 'te' ? 'Chrome బ్రౌజర్ వాడండి.' : 'Please use Chrome browser for voice input.'}
             </p>
           )}
         </div>
