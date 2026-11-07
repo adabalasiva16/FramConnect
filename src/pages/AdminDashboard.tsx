@@ -254,17 +254,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
   const verifiedCount = farmersOnly.filter(isFarmerApproved).length;
   const rejectedCount = farmersOnly.filter(isFarmerRejected).length;
 
-  // Filtered farmers list — strictly categorizes by approval status
-  const filteredUsers = farmersOnly.filter((u) => {
+  // Filtered users list — shows ALL non-admin users (farmers + customers), filters farmers by approval status
+  const filteredUsers = users.filter((u) => {
+    // For status filters, only apply to farmers (customers are auto-approved)
     if (statusFilter === 'pending' && !isFarmerPending(u)) return false;
-    if (statusFilter === 'verified' && !isFarmerApproved(u)) return false;
+    if (statusFilter === 'verified' && u.role === 'farmer' && !isFarmerApproved(u)) return false;
     if (statusFilter === 'rejected' && !isFarmerRejected(u)) return false;
     if (farmerSearch.trim()) {
       const q = farmerSearch.toLowerCase().trim();
       const matchName = u.fullName.toLowerCase().includes(q);
       const matchEmail = u.email.toLowerCase().includes(q);
       const matchPhone = u.mobile.includes(q);
-      const matchLocation = `${u.village} ${u.mandal} ${u.district} ${u.state}`.toLowerCase().includes(q);
+      const matchLocation = `${u.village || ''} ${u.mandal || ''} ${u.district || ''} ${u.state || ''}`.toLowerCase().includes(q);
       return matchName || matchEmail || matchPhone || matchLocation;
     }
     return true;
@@ -580,7 +581,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                           </div>
 
                           <p className="text-xs text-stone-600 font-medium mt-1">
-                            📍 {u.village}, {u.mandal}, {u.district}, {u.state}
+                          {u.role === 'farmer' ? `📍 ${u.village || '—'}, ${u.mandal || '—'}, ${u.district || '—'}, ${u.state || '—'}` : '🛒 Consumer Account'}
                           </p>
                           <p className="text-[11px] text-stone-400 mt-0.5">
                             ✉️ {u.email} • 📞 {u.mobile} {u.role === 'farmer' && `• Exp: ${u.farmingExperience || 10} yrs`}
@@ -603,7 +604,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                           <span>Details</span>
                         </button>
 
-                        {!approved && (
+                        {!approved && u.role === 'farmer' && (
                           <button
                             onClick={() => handleApproveUser(u)}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1 shadow-2xs"
@@ -613,7 +614,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                           </button>
                         )}
 
-                        {!rejected && (
+                        {!rejected && u.role === 'farmer' && (
                           <button
                             onClick={() => handleOpenRejectModal(u)}
                             className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1 shadow-2xs"

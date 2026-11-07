@@ -79,8 +79,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
   useEffect(() => {
     if (selectedRole === 'admin') {
-      setEmail((prev) => prev || 'adabalasiva16@gmail.com');
-      setPassword((prev) => prev || 'sivaram@12345');
+      setEmail('');
+      setPassword('');
     }
   }, [selectedRole]);
 
@@ -399,21 +399,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
             {/* Mode Tabs / Admin Notice */}
             {selectedRole === 'admin' ? (
-              <div className="mb-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-950 flex flex-col gap-2">
-                <div className="flex items-center gap-2.5">
-                  <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0" />
-                  <div>
-                    <strong className="block font-bold">Administrator Portal Login</strong>
-                    <span className="text-stone-600">Please sign in with your official Administrator credentials.</span>
-                  </div>
-                </div>
-                <div className="mt-1 pt-2 border-t border-emerald-200/60 font-mono text-[11px] flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-emerald-900 bg-white/60 p-2.5 rounded-xl">
-                  <div>
-                    <span className="font-sans font-bold text-stone-700">Email:</span> adabalasiva16@gmail.com
-                  </div>
-                  <div>
-                    <span className="font-sans font-bold text-stone-700">Password:</span> sivaram@12345
-                  </div>
+              <div className="mb-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-950 flex items-center gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0" />
+                <div>
+                  <strong className="block font-bold">Administrator Portal Login</strong>
+                  <span className="text-stone-600">Please enter your administrator email and password to continue.</span>
                 </div>
               </div>
             ) : (
@@ -504,7 +494,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="adabalasiva16@gmail.com"
+                      placeholder="Enter your admin email"
                       className="w-full border border-stone-200 rounded-xl p-3 focus:outline-none focus:border-emerald-500 font-medium"
                     />
                   </div>
