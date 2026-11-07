@@ -285,10 +285,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
               ? 'ఈ కంట్రోల్ ప్యానెల్ ధృవీకరించబడిన ప్రభుత్వ లేదా ప్లాట్‌ఫారమ్ నిర్వాహకులకు మాత్రమే కేటాయించబడింది. దయచేసి మీ అడ్మిన్ ఖాతాతో లాగిన్ అవ్వండి.'
               : 'This governance console is restricted to regulatory and platform authorities. Please sign in with an Administrator profile.'}
           </p>
+          {user && (
+            <div className="mb-5 p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl text-xs text-amber-950 text-left">
+              <p className="font-bold mb-1">
+                {language === 'te' ? 'ప్రస్తుత సెషన్:' : 'Current Session:'}
+              </p>
+              <p className="text-stone-800 font-semibold truncate">
+                {user.email || user.fullName} ({user.role === 'farmer' ? (language === 'te' ? 'రైతు' : 'Farmer') : user.role})
+              </p>
+              <p className="text-[11px] text-amber-800/90 mt-1.5">
+                {language === 'te'
+                  ? 'ఈ గవర్నెన్స్ పోర్టల్‌ను యాక్సెస్ చేయడానికి అడ్మిన్ ఖాతాలోకి మారండి.'
+                  : 'You are signed in with a Farmer account. Click below to sign in with your Administrator credentials.'}
+              </p>
+            </div>
+          )}
           <div className="flex flex-col gap-3">
             <button
-              onClick={() => onOpenAuth?.('login', 'admin')}
-              className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 rounded-xl transition-colors shadow-sm"
+              onClick={async () => {
+                if (user) {
+                  await logout();
+                }
+                onOpenAuth?.('login', 'admin');
+              }}
+              className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 rounded-xl transition-colors shadow-sm text-sm"
             >
               {language === 'te' ? 'అడ్మిన్ ఖాతాలోకి లాగిన్ అవ్వండి' : 'Sign In as Administrator'}
             </button>

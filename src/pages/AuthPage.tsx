@@ -65,6 +65,25 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [selectedRole, setSelectedRole] = useState<UserRole>(initialRole);
 
+  useEffect(() => {
+    if (initialRole) {
+      setSelectedRole(initialRole);
+    }
+  }, [initialRole]);
+
+  useEffect(() => {
+    if (initialMode) {
+      setMode(initialMode);
+    }
+  }, [initialMode]);
+
+  useEffect(() => {
+    if (selectedRole === 'admin') {
+      setEmail((prev) => prev || 'admin@farmconnect.org');
+      setPassword((prev) => prev || 'farmconnect123');
+    }
+  }, [selectedRole]);
+
   const handleGoogleLogin = async () => {
     setIsSubmitting(true);
     setErrorMsg('');
@@ -208,9 +227,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
       if (mode === 'login') {
         try {
-          const foundProfile = await loginWithMobileOrEmail(cleanEmail, password || 'farmconnect123', selectedRole);
+          const pass = password || (selectedRole === 'farmer' ? 'farmer123' : 'farmconnect123');
+          const foundProfile = await loginWithMobileOrEmail(cleanEmail, pass, selectedRole);
           if (!foundProfile) {
-            const foundByMobile = await loginWithMobileOrEmail(fullPhone, password || 'farmconnect123', selectedRole);
+            const foundByMobile = await loginWithMobileOrEmail(fullPhone, pass, selectedRole);
             if (!foundByMobile) {
               throw new Error(`No registered ${selectedRole} account found for ${cleanEmail}. Please register first.`);
             }
@@ -235,6 +255,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         }
 
         try {
+          const defaultRegisterPassword = password || (selectedRole === 'farmer' ? 'farmer123' : 'farmconnect123');
           const success = await register({
             fullName,
             email: cleanEmail,
@@ -247,7 +268,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
             role: selectedRole,
             farmingExperience: selectedRole === 'farmer' ? farmingExperience : undefined,
             bio,
-            password: password || 'farmconnect123',
+            password: defaultRegisterPassword,
           });
           
           if (success) {
@@ -378,11 +399,21 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
             {/* Mode Tabs / Admin Notice */}
             {selectedRole === 'admin' ? (
-              <div className="mb-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-950 flex items-center gap-2.5">
-                <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0" />
-                <div>
-                  <strong className="block font-bold">Administrator Portal Login</strong>
-                  <span>Profile creation is disabled. Please sign in using your Firebase Authentication credentials.</span>
+              <div className="mb-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-950 flex flex-col gap-2">
+                <div className="flex items-center gap-2.5">
+                  <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0" />
+                  <div>
+                    <strong className="block font-bold">Administrator Portal Login</strong>
+                    <span className="text-stone-600">Please sign in with your official Administrator credentials.</span>
+                  </div>
+                </div>
+                <div className="mt-1 pt-2 border-t border-emerald-200/60 font-mono text-[11px] flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-emerald-900 bg-white/60 p-2.5 rounded-xl">
+                  <div>
+                    <span className="font-sans font-bold text-stone-700">Email:</span> admin@farmconnect.org
+                  </div>
+                  <div>
+                    <span className="font-sans font-bold text-stone-700">Password:</span> farmconnect123
+                  </div>
                 </div>
               </div>
             ) : (
@@ -686,9 +717,16 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   {/* Passwords */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="font-bold text-stone-700 block mb-1">
-                        {language === 'te' ? 'పాస్‌వర్డ్ *' : 'Password *'}
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-stone-700 block">
+                          {language === 'te' ? 'పాస్‌వర్డ్ *' : 'Password *'}
+                        </label>
+                        {selectedRole === 'farmer' && mode === 'login' && (
+                          <span className="text-[10px] text-stone-500 font-medium">
+                            Default: <code className="text-emerald-700 font-bold">farmer123</code>
+                          </span>
+                        )}
+                      </div>
                       <div className="relative">
                         <input
                           type={showPassword ? 'text' : 'password'}

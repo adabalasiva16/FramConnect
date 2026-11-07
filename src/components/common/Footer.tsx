@@ -72,6 +72,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   {language === 'te' ? 'డెలివరీ & సేకరణ కేంద్రాలు' : 'Delivery & Hubs'}
                 </button>
               </li>
+              <li>
+                <button onClick={() => onNavigate('admin-dashboard')} className="hover:text-emerald-400 transition-colors">
+                  {language === 'te' ? 'అడ్మిన్ పోర్టల్' : 'Admin Portal'}
+                </button>
+              </li>
             </ul>
           </div>
 

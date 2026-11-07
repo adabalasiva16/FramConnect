@@ -263,7 +263,7 @@ export const userService = {
       isVerified: true,
       verificationStatus: 'verified',
       createdAt: new Date().toISOString(),
-      passwordHash: 'farmconnect123'
+      passwordHash: (role === 'farmer' ? 'farmer123' : (role === 'admin' ? 'farmconnect123' : 'farmer123'))
     };
     await userService.registerUser(newAccount);
     const { passwordHash: _, ...profile } = newAccount;
@@ -323,6 +323,7 @@ export const userService = {
         const merged: UserProfile = {
           ...(existing || {}),
           ...f,
+          role: existing?.role === 'admin' ? 'admin' : (f.role || existing?.role || 'farmer'),
           isVerified: isApproved,
           verificationStatus: isApproved ? 'approved' : (f.verificationStatus || existing?.verificationStatus || 'pending'),
           approvalStatus: isApproved ? 'approved' : (f.approvalStatus || existing?.approvalStatus || 'pending'),
@@ -356,6 +357,7 @@ export const userService = {
             ...(existing || {}),
             ...profile,
             id: docId,
+            role: existing?.role === 'admin' ? 'admin' : (profile.role || existing?.role || 'farmer'),
             isVerified: isApproved,
             verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || existing?.verificationStatus || 'pending'),
             approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || existing?.approvalStatus || 'pending'),
@@ -386,6 +388,7 @@ export const userService = {
             ...(existing || {}),
             ...profile,
             id: docId,
+            role: existing?.role === 'admin' ? 'admin' : (profile.role || existing?.role || 'farmer'),
             isVerified: isApproved,
             verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || existing?.verificationStatus || 'pending'),
             approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || existing?.approvalStatus || 'pending'),
