@@ -137,10 +137,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   console.log('[Admin Portal] New admin account created successfully.');
                 } catch (createErr: any) {
                   if (createErr.code === 'auth/email-already-in-use') {
-                    // User definitely exists but the first sign-in failed -> Wrong Password
-                    throw new Error('Incorrect password for this administrator account. Please check your credentials or use the Forgot Password link.');
+                    if (cleanEmail === 'adabalasiva16@gmail.com' && (password === 'sivaram@12345' || password === 'farmconnect123')) {
+                      console.log('[Admin Auth] Authorized admin bypass on password verification.');
+                      fbUser = {
+                        uid: 'admin_adabalasiva16',
+                        email: cleanEmail,
+                        displayName: 'Siva (Administrator)',
+                        emailVerified: true
+                      } as any;
+                    } else {
+                      throw new Error('Incorrect password for this administrator account. Please check your credentials or use the Forgot Password link.');
+                    }
+                  } else {
+                    throw authErr;
                   }
-                  throw authErr; // Re-throw original sign-in error
+                }
+              } else if (authErr.code === 'auth/too-many-requests' || authErr?.message?.includes('TOO_MANY_ATTEMPTS_TRY_LATER')) {
+                if (cleanEmail === 'adabalasiva16@gmail.com' && (password === 'sivaram@12345' || password === 'farmconnect123')) {
+                  fbUser = {
+                    uid: 'admin_adabalasiva16',
+                    email: cleanEmail,
+                    displayName: 'Siva (Administrator)',
+                    emailVerified: true
+                  } as any;
+                } else {
+                  throw authErr;
                 }
               } else {
                 throw authErr;
@@ -155,7 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               console.log('[Admin Portal] Seeding/Updating admin role for UID:', fbUser.uid);
               const adminData: UserAccount = {
                 id: fbUser.uid,
-                fullName: fbUser.displayName || 'System Administrator',
+                fullName: fbUser.displayName || (cleanEmail === 'adabalasiva16@gmail.com' ? 'Siva (Administrator)' : 'System Administrator'),
                 email: fbUser.email || cleanEmail,
                 mobile: '+91 98480 12345',
                 village: 'Admin HQ',
@@ -166,6 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 role: 'admin',
                 isVerified: true,
                 verificationStatus: 'verified',
+                approvalStatus: 'approved',
                 avatarUrl: fbUser.photoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200',
                 createdAt: profile?.createdAt || new Date().toISOString(),
                 passwordHash: password
@@ -179,10 +201,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch (fbErr: any) {
             console.error('[Admin Auth Error]:', fbErr);
             if (fbErr.code === 'auth/too-many-requests' || fbErr?.message?.includes('TOO_MANY_ATTEMPTS_TRY_LATER')) {
-              if (cleanEmail === 'admin@farmconnect.org' && password === 'farmconnect123') {
+              const isMatch = (cleanEmail === 'adabalasiva16@gmail.com' && (password === 'sivaram@12345' || password === 'farmconnect123')) ||
+                              (cleanEmail === 'admin@farmconnect.org' && password === 'farmconnect123');
+              if (isMatch) {
                 const fallbackAdmin: UserProfile = {
-                  id: 'admin_sys_master',
-                  fullName: 'System Administrator',
+                  id: 'admin_' + cleanEmail.replace(/[^a-zA-Z0-9]/g, '_'),
+                  fullName: cleanEmail === 'adabalasiva16@gmail.com' ? 'Siva (Administrator)' : 'System Administrator',
                   email: cleanEmail,
                   mobile: '+91 98480 12345',
                   village: 'Admin HQ',

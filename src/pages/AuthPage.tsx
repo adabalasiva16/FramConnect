@@ -79,8 +79,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
   useEffect(() => {
     if (selectedRole === 'admin') {
-      setEmail((prev) => prev || 'admin@farmconnect.org');
-      setPassword((prev) => prev || 'farmconnect123');
+      setEmail((prev) => prev || 'adabalasiva16@gmail.com');
+      setPassword((prev) => prev || 'sivaram@12345');
     }
   }, [selectedRole]);
 
@@ -409,10 +409,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 </div>
                 <div className="mt-1 pt-2 border-t border-emerald-200/60 font-mono text-[11px] flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-emerald-900 bg-white/60 p-2.5 rounded-xl">
                   <div>
-                    <span className="font-sans font-bold text-stone-700">Email:</span> admin@farmconnect.org
+                    <span className="font-sans font-bold text-stone-700">Email:</span> adabalasiva16@gmail.com
                   </div>
                   <div>
-                    <span className="font-sans font-bold text-stone-700">Password:</span> farmconnect123
+                    <span className="font-sans font-bold text-stone-700">Password:</span> sivaram@12345
                   </div>
                 </div>
               </div>
@@ -504,7 +504,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="admin@farmconnect.org"
+                      placeholder="adabalasiva16@gmail.com"
                       className="w-full border border-stone-200 rounded-xl p-3 focus:outline-none focus:border-emerald-500 font-medium"
                     />
                   </div>

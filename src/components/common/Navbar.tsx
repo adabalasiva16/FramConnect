@@ -186,7 +186,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {isAuthenticated && role === 'admin' && (
+          {isAuthenticated && (role === 'admin' || user?.email?.toLowerCase().trim() === 'adabalasiva16@gmail.com') && (
             <button
               onClick={() => onNavigate('admin-dashboard')}
               className={`px-3 py-2 rounded-xl flex items-center gap-1.5 ${

@@ -270,7 +270,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
     return true;
   });
 
-  if (!user || user.role !== 'admin') {
+  const isUserAdmin = Boolean(
+    user && (user.role === 'admin' || user.email?.toLowerCase().trim() === 'adabalasiva16@gmail.com' || user.email?.toLowerCase().trim() === 'admin@farmconnect.org')
+  );
+
+  if (!isUserAdmin) {
     return (
       <div className="min-h-screen bg-stone-50 py-16 px-4">
         <div className="max-w-md mx-auto bg-white p-8 rounded-3xl border border-stone-200 shadow-md text-center">
