@@ -126,6 +126,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => onNavigate('home')}
           className="flex items-center gap-2.5 text-left group shrink-0"
         >
+          <img
+            src="/farmconnect-logo.jpg"
+            alt="FarmConnect Logo"
+            className="h-10 sm:h-12 w-auto object-contain shrink-0"
+          />
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-xl font-extrabold tracking-tight text-emerald-950">
