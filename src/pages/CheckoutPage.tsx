@@ -54,7 +54,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
     let isMounted = true;
     const updateDistance = async () => {
       const destination = `${village || ''} ${district || ''}`.trim() || 'Guntur';
-      const origin = items[0]?.farmerVillage || 'Tenali';
+      const origin = (items[0] as any)?.farmerVillage || 'Tenali';
       const km = await deliveryService.calculateDistance(origin, destination);
       if (isMounted) setDeliveryDistanceKm(km);
     };

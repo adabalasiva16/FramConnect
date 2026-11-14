@@ -349,8 +349,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
 
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-bold text-emerald-300">{user.fullName}</p>
-              <p className="text-[10px] text-stone-300">{user.email}</p>
+              <p className="text-xs font-bold text-emerald-300">{user?.fullName || 'Administrator'}</p>
+              <p className="text-[10px] text-stone-300">{user?.email || 'admin@farmconnect.org'}</p>
             </div>
             <button
               onClick={() => logout()}

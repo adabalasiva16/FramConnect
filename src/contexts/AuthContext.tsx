@@ -60,29 +60,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // User is signed in to Firebase Auth
         const profile = await userService.getUserById(fbUser.uid, fbUser.email || undefined);
         if (profile) {
-          const hasStatusChanged =
-            !user ||
-            user.id !== fbUser.uid ||
-            user.isVerified !== profile.isVerified ||
-            user.verificationStatus !== profile.verificationStatus ||
-            user.approvalStatus !== profile.approvalStatus;
+          setUser((prevUser) => {
+            const hasStatusChanged =
+              !prevUser ||
+              prevUser.id !== fbUser.uid ||
+              prevUser.isVerified !== profile.isVerified ||
+              prevUser.verificationStatus !== profile.verificationStatus ||
+              prevUser.approvalStatus !== profile.approvalStatus;
 
-          if (hasStatusChanged) {
-            setUser(profile);
-            localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(profile));
-          }
-        }
-      } else {
-        // User is signed out of Firebase Auth
-        if (user) {
-          setUser(null);
-          localStorage.removeItem(USER_STORAGE_KEY);
+            if (hasStatusChanged) {
+              localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(profile));
+              return profile;
+            }
+            return prevUser;
+          });
         }
       }
     });
     
     return () => unsubscribe();
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     const handleStorageUpdate = () => {

@@ -237,8 +237,8 @@ export const getStoredFarmers = (): UserProfile[] => {
 
 export const setFarmerVerification = (userId: string, isVerified: boolean, status?: 'pending' | 'verified' | 'rejected' | 'approved', reason?: string): void => {
   const isApproved = isVerified || status === 'verified' || status === 'approved';
-  const vStatus = isApproved ? 'approved' : (status === 'rejected' ? 'rejected' : 'pending');
-  const updateFields = {
+  const vStatus: 'approved' | 'rejected' | 'pending' = isApproved ? 'approved' : (status === 'rejected' ? 'rejected' : 'pending');
+  const updateFields: any = {
     isVerified: isApproved,
     verificationStatus: vStatus,
     approvalStatus: vStatus,
