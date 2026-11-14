@@ -81,6 +81,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     if (selectedRole === 'admin') {
       setEmail('');
       setPassword('');
+      setMode('login');
     }
   }, [selectedRole]);
 
@@ -855,7 +856,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   <>
                     <span>
                       {selectedRole === 'admin' 
-                        ? (mode === 'login' ? t('navLogin') : 'Register Admin')
+                        ? t('navLogin')
                         : (mode === 'login'
                             ? (verificationPending ? (language === 'te' ? 'లాగిన్ ప్రయత్నించండి' : 'Try Logging In') : t('navLogin'))
                             : (verificationPending ? (language === 'te' ? 'రిజిస్టర్ విజయవంతమైంది' : 'Registration Successful') : 'Register & Verify Profile'))
@@ -867,35 +868,37 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               </button>
             </form>
 
-            <div className="mt-6 pt-5 border-t border-stone-100 text-center text-xs text-stone-500">
-              {mode === 'login' ? (
-                <p>
-                  Don't have a profile yet?{' '}
-                  <button
-                    onClick={() => {
-                      setMode('register');
-                      setErrorMsg('');
-                    }}
-                    className="font-bold text-emerald-700 hover:underline"
-                  >
-                    Create a new verified profile
-                  </button>
-                </p>
-              ) : (
-                <p>
-                  Already have an account?{' '}
-                  <button
-                    onClick={() => {
-                      setMode('login');
-                      setErrorMsg('');
-                    }}
-                    className="font-bold text-emerald-700 hover:underline"
-                  >
-                    Log in here
-                  </button>
-                </p>
-              )}
-            </div>
+            {selectedRole !== 'admin' && (
+              <div className="mt-6 pt-5 border-t border-stone-100 text-center text-xs text-stone-500">
+                {mode === 'login' ? (
+                  <p>
+                    Don't have a profile yet?{' '}
+                    <button
+                      onClick={() => {
+                        setMode('register');
+                        setErrorMsg('');
+                      }}
+                      className="font-bold text-emerald-700 hover:underline"
+                    >
+                      Create a new verified profile
+                    </button>
+                  </p>
+                ) : (
+                  <p>
+                    Already have an account?{' '}
+                    <button
+                      onClick={() => {
+                        setMode('login');
+                        setErrorMsg('');
+                      }}
+                      className="font-bold text-emerald-700 hover:underline"
+                    >
+                      Log in here
+                    </button>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

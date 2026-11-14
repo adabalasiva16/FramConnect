@@ -68,24 +68,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         {/* Form Body */}
         <div className="p-6 overflow-y-auto flex-1">
           {/* Mode Switcher */}
-          <div className="flex bg-stone-100 p-1 rounded-2xl mb-5">
-            <button
-              onClick={() => setMode('login')}
-              className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                mode === 'login' ? 'bg-white text-stone-900 shadow-2xs' : 'text-stone-500 hover:text-stone-800'
-              }`}
-            >
-              {t('navLogin')}
-            </button>
-            <button
-              onClick={() => setMode('register')}
-              className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                mode === 'register' ? 'bg-white text-stone-900 shadow-2xs' : 'text-stone-500 hover:text-stone-800'
-              }`}
-            >
-              {t('navRegister')}
-            </button>
-          </div>
+          {selectedRole === 'admin' ? (
+            <div className="mb-5 p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-950 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+              <span className="font-semibold">Administrator Portal Login</span>
+            </div>
+          ) : (
+            <div className="flex bg-stone-100 p-1 rounded-2xl mb-5">
+              <button
+                onClick={() => setMode('login')}
+                className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  mode === 'login' ? 'bg-white text-stone-900 shadow-2xs' : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                {t('navLogin')}
+              </button>
+              <button
+                onClick={() => setMode('register')}
+                className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  mode === 'register' ? 'bg-white text-stone-900 shadow-2xs' : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                {t('navRegister')}
+              </button>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4 text-xs sm:text-sm">
             {/* Role Selection */}
@@ -118,7 +125,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedRole('admin')}
+                  onClick={() => {
+                    setSelectedRole('admin');
+                    setMode('login');
+                  }}
                   className={`p-2.5 rounded-xl border text-center font-bold text-xs transition-all ${
                     selectedRole === 'admin'
                       ? 'border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500/20'
