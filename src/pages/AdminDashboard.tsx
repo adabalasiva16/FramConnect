@@ -22,6 +22,11 @@ import {
   ThumbsUp,
   ThumbsDown,
   RotateCcw,
+  Trash2,
+  UserX,
+  ChevronDown,
+  ChevronUp,
+  MessageSquare,
 } from 'lucide-react';
 import { UserProfile, Product, Order, Review, UserRole } from '../types';
 import { farmerService } from '../services/farmerService';
@@ -65,15 +70,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // User sub-filter: 'all' | 'farmers' | 'customers'
+  const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'farmers' | 'customers'>('all');
+
   // Filters & Search for Farmers
   const [farmerSearch, setFarmerSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
 
   // Modals
   const [selectedFarmer, setSelectedFarmer] = useState<UserProfile | null>(null);
+  const [selectedFarmerProducts, setSelectedFarmerProducts] = useState<Product[]>([]);
+  const [selectedFarmerProductsLoading, setSelectedFarmerProductsLoading] = useState(false);
   const [rejectModalFarmer, setRejectModalFarmer] = useState<UserProfile | null>(null);
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
+
+  // Delete confirmation modal
+  const [deleteConfirmUser, setDeleteConfirmUser] = useState<UserProfile | null>(null);
+  const [deleteConfirmProduct, setDeleteConfirmProduct] = useState<{ id: string; name: string; farmerId: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Consumer view modal
+  const [selectedConsumer, setSelectedConsumer] = useState<UserProfile | null>(null);
+  const [consumerOrders, setConsumerOrders] = useState<Order[]>([]);
 
   useEffect(() => {
     loadData();
@@ -96,6 +115,75 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
       setOrders(oData);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleViewFarmerDetails = async (farmer: UserProfile) => {
+    setSelectedFarmer(farmer);
+    setSelectedFarmerProducts([]);
+    setSelectedFarmerProductsLoading(true);
+    try {
+      const allProducts = await productService.getAll();
+      const farmerProds = allProducts.filter(p => p.farmerId === farmer.id);
+      setSelectedFarmerProducts(farmerProds);
+    } catch (e) {
+      console.warn('Error loading farmer products:', e);
+    } finally {
+      setSelectedFarmerProductsLoading(false);
+    }
+  };
+
+  const handleViewConsumerDetails = (consumer: UserProfile) => {
+    setSelectedConsumer(consumer);
+    const cOrders = orders.filter(o => o.customerId === consumer.id);
+    setConsumerOrders(cOrders);
+  };
+
+  const handleDeleteUserConfirm = (u: UserProfile) => {
+    setDeleteConfirmUser(u);
+  };
+
+  const handleDeleteProductConfirm = (p: Product) => {
+    setDeleteConfirmProduct({ id: p.id, name: p.name, farmerId: p.farmerId });
+  };
+
+  const handleDeleteProductAdminFromModal = (p: Product) => {
+    setDeleteConfirmProduct({ id: p.id, name: p.name, farmerId: p.farmerId });
+  };
+
+  const executeDeleteUser = async () => {
+    if (!deleteConfirmUser) return;
+    setIsDeleting(true);
+    try {
+      await userService.deleteAccount(deleteConfirmUser.id);
+      setUsers(prev => prev.filter(u => u.id !== deleteConfirmUser.id));
+      setActionSuccessMsg(`Account for ${deleteConfirmUser.fullName} deleted successfully.`);
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+      setDeleteConfirmUser(null);
+      setSelectedFarmer(null);
+      setSelectedConsumer(null);
+      await loadData();
+    } catch (err: any) {
+      alert('Delete error: ' + (err?.message || String(err)));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const executeDeleteProduct = async () => {
+    if (!deleteConfirmProduct) return;
+    setIsDeleting(true);
+    try {
+      await productService.delete(deleteConfirmProduct.id);
+      setProducts(prev => prev.filter(p => p.id !== deleteConfirmProduct.id));
+      setSelectedFarmerProducts(prev => prev.filter(p => p.id !== deleteConfirmProduct.id));
+      setActionSuccessMsg(`Product "${deleteConfirmProduct.name}" deleted successfully.`);
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+      setDeleteConfirmProduct(null);
+    } catch (err: any) {
+      alert('Delete error: ' + (err?.message || String(err)));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -250,12 +338,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
   const totalGMV = orders.reduce((sum, o) => sum + o.finalAmount, 0);
   // Only farmers need admin approval — customers are auto-approved
   const farmersOnly = users.filter((u) => u.role === 'farmer');
+  const customersOnly = users.filter((u) => u.role === 'customer');
   const pendingCount = farmersOnly.filter(isFarmerPending).length;
   const verifiedCount = farmersOnly.filter(isFarmerApproved).length;
   const rejectedCount = farmersOnly.filter(isFarmerRejected).length;
 
-  // Filtered users list — shows ALL non-admin users (farmers + customers), filters farmers by approval status
+  // Filtered users list — applies userRoleFilter + statusFilter + search
   const filteredUsers = users.filter((u) => {
+    // Role filter
+    if (userRoleFilter === 'farmers' && u.role !== 'farmer') return false;
+    if (userRoleFilter === 'customers' && u.role !== 'customer') return false;
     // For status filters, only apply to farmers (customers are auto-approved)
     if (statusFilter === 'pending' && !isFarmerPending(u)) return false;
     if (statusFilter === 'verified' && u.role === 'farmer' && !isFarmerApproved(u)) return false;
@@ -460,7 +552,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                   {language === 'te' ? 'యూజర్ ఖాతాల పరిశీలన మరియు అడ్మిన్ ఆమోదం' : 'User Directory & Verification Console'}
                 </h3>
                 <p className="text-xs text-stone-500 mt-0.5">
-                  Audit registered users (Farmers & Customers), view details, and manage platform verification.
+                  Audit registered users (Farmers & Consumers), view details, delete accounts, and manage platform verification.
                 </p>
               </div>
 
@@ -477,56 +569,79 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
               </div>
             </div>
 
-            {/* Status Filter Buttons */}
-            <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-              <span className="text-stone-400 mr-1 flex items-center gap-1">
-                <Filter className="w-3.5 h-3.5" />
-                <span>Filter:</span>
-              </span>
-              <button
-                onClick={() => setStatusFilter('all')}
-                className={`px-3 py-1.5 rounded-xl transition-all ${
-                  statusFilter === 'all'
-                    ? 'bg-stone-900 text-white shadow-2xs'
-                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                }`}
-              >
-                All Users ({users.length})
-              </button>
-              <button
-                onClick={() => setStatusFilter('pending')}
-                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
-                  statusFilter === 'pending'
-                    ? 'bg-amber-500 text-white shadow-2xs'
-                    : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
-                }`}
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>Pending Review ({pendingCount})</span>
-              </button>
-              <button
-                onClick={() => setStatusFilter('verified')}
-                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
-                  statusFilter === 'verified'
-                    ? 'bg-emerald-600 text-white shadow-2xs'
-                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
-                }`}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Verified ({verifiedCount})</span>
-              </button>
-              <button
-                onClick={() => setStatusFilter('rejected')}
-                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
-                  statusFilter === 'rejected'
-                    ? 'bg-rose-600 text-white shadow-2xs'
-                    : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
-                }`}
-              >
-                <XCircle className="w-3.5 h-3.5" />
-                <span>Rejected ({rejectedCount})</span>
-              </button>
+            {/* Role Tabs: All / Farmers / Consumers */}
+            <div className="flex gap-2 text-xs font-bold">
+              {(['all', 'farmers', 'customers'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => { setUserRoleFilter(tab); setStatusFilter('all'); }}
+                  className={`px-3.5 py-2 rounded-xl transition-all ${
+                    userRoleFilter === tab
+                      ? 'bg-emerald-700 text-white shadow-sm'
+                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                  }`}
+                >
+                  {tab === 'all'
+                    ? `All Users (${users.length})`
+                    : tab === 'farmers'
+                    ? `🌾 Farmers (${farmersOnly.length})`
+                    : `🛒 Consumers (${customersOnly.length})`}
+                </button>
+              ))}
             </div>
+
+            {/* Status Filter Buttons — only relevant when viewing Farmers */}
+            {userRoleFilter !== 'customers' && (
+              <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+                <span className="text-stone-400 mr-1 flex items-center gap-1">
+                  <Filter className="w-3.5 h-3.5" />
+                  <span>Farmer Status:</span>
+                </span>
+                <button
+                  onClick={() => setStatusFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl transition-all ${
+                    statusFilter === 'all'
+                      ? 'bg-stone-900 text-white shadow-2xs'
+                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setStatusFilter('pending')}
+                  className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                    statusFilter === 'pending'
+                      ? 'bg-amber-500 text-white shadow-2xs'
+                      : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Pending ({pendingCount})</span>
+                </button>
+                <button
+                  onClick={() => setStatusFilter('verified')}
+                  className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                    statusFilter === 'verified'
+                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Verified ({verifiedCount})</span>
+                </button>
+                <button
+                  onClick={() => setStatusFilter('rejected')}
+                  className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                    statusFilter === 'rejected'
+                      ? 'bg-rose-600 text-white shadow-2xs'
+                      : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
+                  }`}
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>Rejected ({rejectedCount})</span>
+                </button>
+              </div>
+            )}
 
             {/* Users List */}
             {filteredUsers.length === 0 ? (
@@ -543,6 +658,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                   const approved = isFarmerApproved(u);
                   const rejected = isFarmerRejected(u);
                   const pending = isFarmerPending(u);
+                  const isCustomer = u.role === 'customer';
                   return (
                     <div
                       key={u.id}
@@ -558,21 +674,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-bold text-stone-900 text-sm">{u.fullName}</span>
                             <span className={`text-[9px] uppercase font-black px-1.5 py-0.5 rounded ${u.role === 'farmer' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
-                              {u.role}
+                              {u.role === 'customer' ? 'Consumer' : u.role}
                             </span>
-                            {approved && (
+                            {!isCustomer && approved && (
                               <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-emerald-300">
                                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                                 Approved
                               </span>
                             )}
-                            {pending && (
+                            {!isCustomer && pending && (
                               <span className="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-amber-300">
                                 <Clock className="w-3.5 h-3.5 text-amber-600" />
                                 Pending
                               </span>
                             )}
-                            {rejected && (
+                            {!isCustomer && rejected && (
                               <span className="bg-rose-100 text-rose-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-rose-300">
                                 <XCircle className="w-3.5 h-3.5 text-rose-600" />
                                 Rejected
@@ -581,7 +697,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                           </div>
 
                           <p className="text-xs text-stone-600 font-medium mt-1">
-                          {u.role === 'farmer' ? `📍 ${u.village || '—'}, ${u.mandal || '—'}, ${u.district || '—'}, ${u.state || '—'}` : '🛒 Consumer Account'}
+                          {u.role === 'farmer' ? `📍 ${u.village || '—'}, ${u.mandal || '—'}, ${u.district || '—'}, ${u.state || '—'}` : `🛒 Consumer — ${u.village || '—'}, ${u.district || '—'}`}
                           </p>
                           <p className="text-[11px] text-stone-400 mt-0.5">
                             ✉️ {u.email} • 📞 {u.mobile} {u.role === 'farmer' && `• Exp: ${u.farmingExperience || 10} yrs`}
@@ -597,11 +713,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                       {/* Actions */}
                       <div className="flex flex-wrap items-center gap-2 shrink-0">
                         <button
-                          onClick={() => setSelectedFarmer(u)}
+                          onClick={() => isCustomer ? handleViewConsumerDetails(u) : handleViewFarmerDetails(u)}
                           className="bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs font-bold px-3 py-2 rounded-xl transition-colors flex items-center gap-1"
                         >
                           <Eye className="w-3.5 h-3.5" />
-                          <span>Details</span>
+                          <span>{isCustomer ? 'View Profile' : 'Details & Products'}</span>
                         </button>
 
                         {!approved && u.role === 'farmer' && (
@@ -617,12 +733,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                         {!rejected && u.role === 'farmer' && (
                           <button
                             onClick={() => handleOpenRejectModal(u)}
-                            className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1 shadow-2xs"
+                            className="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1 shadow-2xs"
                           >
                             <ThumbsDown className="w-3.5 h-3.5" />
                             <span>Reject</span>
                           </button>
                         )}
+
+                        <button
+                          onClick={() => handleDeleteUserConfirm(u)}
+                          className="bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold px-3 py-2 rounded-xl transition-colors flex items-center gap-1 border border-rose-300"
+                          title="Delete account permanently"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
                       </div>
                     </div>
                   );
@@ -697,7 +822,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
             <div className="px-6 py-4 bg-gradient-to-r from-stone-900 to-emerald-950 text-white flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <h3 className="font-bold text-base sm:text-lg">Farmer Full Registration Profile</h3>
+                <h3 className="font-bold text-base sm:text-lg">Farmer Profile & Listed Products</h3>
               </div>
               <button
                 onClick={() => setSelectedFarmer(null)}
@@ -779,8 +904,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                 )}
               </div>
 
+              {/* Listed Products Section */}
+              <div className="p-4 rounded-2xl border border-stone-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-bold text-stone-400 flex items-center gap-1.5">
+                    <Package className="w-3.5 h-3.5" />
+                    Listed Products ({selectedFarmerProducts.length})
+                  </span>
+                </div>
+                {selectedFarmerProductsLoading ? (
+                  <p className="text-xs text-stone-400 font-medium animate-pulse">Loading products...</p>
+                ) : selectedFarmerProducts.length === 0 ? (
+                  <p className="text-xs text-stone-400 font-medium">No products listed by this farmer.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {selectedFarmerProducts.map((p) => (
+                      <div key={p.id} className="flex items-center gap-3 bg-stone-50 rounded-xl p-2.5 border border-stone-200">
+                        <img src={p.images[0]} alt={p.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-stone-900 text-xs truncate">{p.name}</p>
+                          <p className="text-[10px] text-stone-500">₹{p.pricePerKg}/kg • Stock: {p.availableQtyKg} kg</p>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteProductAdminFromModal(p)}
+                          className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg shrink-0"
+                          title="Delete product"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Modal Action Buttons */}
-              <div className="pt-2 flex gap-3">
+              <div className="pt-2 flex flex-wrap gap-3">
                 {!isFarmerApproved(selectedFarmer) && (
                   <button
                     onClick={() => handleApproveUser(selectedFarmer)}
@@ -803,6 +962,187 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAuth }) =>
                     <span>Reject Profile</span>
                   </button>
                 )}
+                <button
+                  onClick={() => handleDeleteUserConfirm(selectedFarmer)}
+                  className="w-full bg-rose-50 hover:bg-rose-100 text-rose-800 font-extrabold py-3 rounded-xl transition-colors flex items-center justify-center gap-1.5 border border-rose-300"
+                >
+                  <UserX className="w-4 h-4" />
+                  <span>Delete Farmer Account</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONSUMER PROFILE DETAIL MODAL */}
+      {selectedConsumer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-blue-100 flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 bg-gradient-to-r from-stone-900 to-blue-950 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Users className="w-5 h-5 text-blue-400" />
+                <h3 className="font-bold text-base sm:text-lg">Consumer Profile & Order History</h3>
+              </div>
+              <button
+                onClick={() => setSelectedConsumer(null)}
+                className="p-1 rounded-full hover:bg-white/20 transition-colors text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
+              {/* Profile info */}
+              <div className="flex items-center gap-4 p-4 bg-stone-50 rounded-2xl border border-stone-200">
+                <img
+                  src={selectedConsumer.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
+                  alt={selectedConsumer.fullName}
+                  className="w-16 h-16 rounded-2xl object-cover border-2 border-blue-500 shrink-0"
+                />
+                <div>
+                  <h4 className="font-extrabold text-stone-900 text-base">{selectedConsumer.fullName}</h4>
+                  <p className="text-xs text-stone-500">{selectedConsumer.email}</p>
+                  <p className="text-xs font-bold text-blue-700 mt-1">Mobile: {selectedConsumer.mobile}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 bg-white p-4 rounded-2xl border border-stone-200">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-stone-400 block">Village / City</span>
+                  <span className="font-bold text-stone-800 text-xs">{selectedConsumer.village || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-stone-400 block">District</span>
+                  <span className="font-bold text-stone-800 text-xs">{selectedConsumer.district || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-stone-400 block">State</span>
+                  <span className="font-bold text-stone-800 text-xs">{selectedConsumer.state || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-stone-400 block">Registered On</span>
+                  <span className="font-bold text-stone-800 text-xs">{new Date(selectedConsumer.createdAt || Date.now()).toLocaleDateString()}</span>
+                </div>
+              </div>
+
+              {/* Order History */}
+              <div className="p-4 rounded-2xl border border-stone-200 space-y-3">
+                <span className="text-[10px] uppercase font-bold text-stone-400 flex items-center gap-1.5">
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  Order History ({consumerOrders.length})
+                </span>
+                {consumerOrders.length === 0 ? (
+                  <p className="text-xs text-stone-400 font-medium">No orders placed yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {consumerOrders.map((ord) => (
+                      <div key={ord.id} className="bg-stone-50 rounded-xl p-2.5 border border-stone-200">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-stone-900 text-xs">Order #{ord.orderNumber}</span>
+                          <span className="font-black text-emerald-700 text-xs">₹{ord.finalAmount}</span>
+                        </div>
+                        <p className="text-[10px] text-stone-500 mt-0.5">Farmer: {ord.farmerName} • Status: <span className="font-bold uppercase">{ord.status}</span></p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Delete Button */}
+              <button
+                onClick={() => handleDeleteUserConfirm(selectedConsumer)}
+                className="w-full bg-rose-50 hover:bg-rose-100 text-rose-800 font-extrabold py-3 rounded-xl transition-colors flex items-center justify-center gap-1.5 border border-rose-300"
+              >
+                <UserX className="w-4 h-4" />
+                <span>Delete Consumer Account</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE USER CONFIRMATION MODAL */}
+      {deleteConfirmUser && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-stone-900/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden border border-rose-200">
+            <div className="px-6 py-4 bg-rose-700 text-white flex items-center gap-2.5">
+              <UserX className="w-5 h-5" />
+              <h3 className="font-bold text-base">Delete Account</h3>
+            </div>
+            <div className="p-6 space-y-4 text-sm">
+              <div className="flex items-center gap-3 p-3 bg-rose-50 rounded-2xl border border-rose-200">
+                <AlertTriangle className="w-6 h-6 text-rose-600 shrink-0" />
+                <p className="text-rose-900 font-semibold text-xs leading-relaxed">
+                  Are you sure you want to permanently delete <strong>{deleteConfirmUser.fullName}</strong>'s account?
+                  This will remove all their data and listed products. This action cannot be undone.
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setDeleteConfirmUser(null)}
+                  disabled={isDeleting}
+                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold py-3 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={executeDeleteUser}
+                  disabled={isDeleting}
+                  className="flex-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white font-extrabold py-3 rounded-xl transition-colors shadow-md flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? (
+                    <span className="animate-pulse">Deleting...</span>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete Account</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE PRODUCT CONFIRMATION MODAL */}
+      {deleteConfirmProduct && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-stone-900/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden border border-orange-200">
+            <div className="px-6 py-4 bg-orange-600 text-white flex items-center gap-2.5">
+              <Trash2 className="w-5 h-5" />
+              <h3 className="font-bold text-base">Delete Product</h3>
+            </div>
+            <div className="p-6 space-y-4 text-sm">
+              <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-2xl border border-orange-200">
+                <AlertTriangle className="w-6 h-6 text-orange-600 shrink-0" />
+                <p className="text-orange-900 font-semibold text-xs leading-relaxed">
+                  Delete product <strong>"{deleteConfirmProduct.name}"</strong>? It will be permanently removed from the marketplace and all search results.
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setDeleteConfirmProduct(null)}
+                  disabled={isDeleting}
+                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold py-3 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={executeDeleteProduct}
+                  disabled={isDeleting}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white font-extrabold py-3 rounded-xl transition-colors shadow-md flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? (
+                    <span className="animate-pulse">Deleting...</span>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete Product</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>

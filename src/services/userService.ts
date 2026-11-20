@@ -8,6 +8,15 @@ export interface UserAccount extends UserProfile {
 
 const LOCAL_USERS_KEY = 'farmconnect_registered_users_v1';
 
+export const normalizeRole = (r?: string): UserRole => {
+  if (!r) return 'customer';
+  const lower = r.toLowerCase().trim();
+  if (lower === 'consumer' || lower === 'customer' || lower === 'buyer') return 'customer';
+  if (lower === 'farmer' || lower === 'seller' || lower === 'grower') return 'farmer';
+  if (lower === 'admin' || lower === 'administrator') return 'admin';
+  return (lower as UserRole) || 'customer';
+};
+
 export const getLocalRegisteredUsers = (): UserAccount[] => {
   try {
     const raw = localStorage.getItem(LOCAL_USERS_KEY);
@@ -114,9 +123,21 @@ export const userService = {
     // 1. Check Firebase Firestore
     if (isFirebaseConfigured()) {
       try {
-        const q = query(collection(db, 'users'), where('email', '==', cleanEmail));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
+        let snap = await getDocs(query(collection(db, 'users'), where('email', '==', cleanEmail)));
+        if (snap.empty) {
+          // Case-insensitive scan
+          const all = await getDocs(collection(db, 'users'));
+          const matched = all.docs.find(d => (d.data().email || '').toLowerCase().trim() === cleanEmail);
+          if (matched) {
+            const userDoc = matched.data();
+            const { password: _, ...profile } = userDoc;
+            return {
+              ...profile,
+              id: matched.id,
+              role: normalizeRole(profile.role),
+            } as UserProfile;
+          }
+        } else {
           // If multiple documents exist with this email, prefer the approved one
           const approvedDoc = snap.docs.find((d) => {
             const data = d.data();
@@ -124,9 +145,6 @@ export const userService = {
           });
           const targetDoc = approvedDoc || snap.docs[0];
           const userDoc = targetDoc.data();
-          if (password && userDoc.password && userDoc.password !== password) {
-            userDoc.password = password;
-          }
           const { password: _, ...profile } = userDoc;
 
           // Check if any matching doc in farmers is approved
@@ -147,11 +165,29 @@ export const userService = {
           return {
             ...profile,
             id: targetDoc.id,
+            role: normalizeRole(profile.role),
             isVerified: isApproved,
             verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || 'pending'),
             approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || 'pending'),
           } as UserProfile;
         }
+
+        // Also check consumers collection if not in users
+        try {
+          const cSnap = await getDocs(collection(db, 'consumers'));
+          const cMatch = cSnap.docs.find(d => (d.data().email || '').toLowerCase().trim() === cleanEmail);
+          if (cMatch) {
+            const { password: _, ...cProfile } = cMatch.data();
+            return {
+              ...cProfile,
+              id: cMatch.id,
+              role: 'customer',
+              isVerified: true,
+              verificationStatus: 'verified',
+              approvalStatus: 'approved',
+            } as UserProfile;
+          }
+        } catch (e) {}
       } catch (err: any) {
         if (err.message === 'Incorrect password') throw err;
         console.warn('[Firebase] login Firestore lookup error:', err);
@@ -160,14 +196,13 @@ export const userService = {
 
     // 2. Check locally registered users
     const localUsers = getLocalRegisteredUsers();
-    const found = localUsers.find((u) => u.email.toLowerCase() === cleanEmail);
+    const found = localUsers.find((u) => u.email.toLowerCase().trim() === cleanEmail);
     if (found) {
-      if (password && found.passwordHash && found.passwordHash !== password) {
-        found.passwordHash = password;
-        saveLocalRegisteredUser(found);
-      }
       const { passwordHash: _, ...profile } = found;
-      return profile;
+      return {
+        ...profile,
+        role: normalizeRole(profile.role),
+      };
     }
 
     return null;
@@ -176,43 +211,83 @@ export const userService = {
   async loginUserByIdentifier(identifier: string, role?: UserRole): Promise<UserProfile | null> {
     const cleanId = identifier.trim().toLowerCase();
     const cleanPhoneDigits = identifier.replace(/\D/g, '');
+    const targetRole = role ? normalizeRole(role) : undefined;
 
     // 1. Check Firebase Firestore
     if (isFirebaseConfigured()) {
       try {
-        let q = query(collection(db, 'users'), where('email', '==', cleanId));
-        let snap = await getDocs(q);
+        // Query users collection
+        const allUsersSnap = await getDocs(collection(db, 'users'));
+        let matchedDoc = allUsersSnap.docs.find((d) => {
+          const data = d.data();
+          const userRole = normalizeRole(data.role);
+          if (targetRole && userRole !== targetRole) return false;
 
-        if (snap.empty && cleanPhoneDigits.length >= 7) {
-          q = query(collection(db, 'users'), where('mobile', '==', identifier));
-          snap = await getDocs(q);
-        }
+          const docEmail = (data.email || '').trim().toLowerCase();
+          if (docEmail && docEmail === cleanId) return true;
 
-        if (snap.empty && cleanPhoneDigits.length >= 7) {
-          const allDocs = await getDocs(collection(db, 'users'));
-          const matched = allDocs.docs.find((d) => {
-            const m = (d.data().mobile || '').replace(/\D/g, '');
-            const targetRole = d.data().role;
-            if (role && targetRole !== role) return false;
-            return m.length >= 7 && (m === cleanPhoneDigits || m.endsWith(cleanPhoneDigits) || cleanPhoneDigits.endsWith(m));
-          });
-          if (matched) {
-            const data = matched.data();
-            const { password: _, ...profile } = data;
-            return profile as UserProfile;
+          const rawMobile = data.mobile || '';
+          if (rawMobile && (rawMobile === identifier || rawMobile.trim() === identifier.trim())) return true;
+
+          const mDigits = rawMobile.replace(/\D/g, '');
+          if (cleanPhoneDigits.length >= 7 && mDigits.length >= 7) {
+            if (mDigits === cleanPhoneDigits || mDigits.endsWith(cleanPhoneDigits) || cleanPhoneDigits.endsWith(mDigits)) {
+              return true;
+            }
           }
+          return false;
+        });
+
+        // If not found in users and target is consumer/customer, check consumers collection
+        if (!matchedDoc && (!targetRole || targetRole === 'customer')) {
+          try {
+            const consumersSnap = await getDocs(collection(db, 'consumers'));
+            matchedDoc = consumersSnap.docs.find((d) => {
+              const data = d.data();
+              const docEmail = (data.email || '').trim().toLowerCase();
+              if (docEmail && docEmail === cleanId) return true;
+              const rawMobile = data.mobile || '';
+              if (rawMobile && rawMobile === identifier) return true;
+              const mDigits = rawMobile.replace(/\D/g, '');
+              if (cleanPhoneDigits.length >= 7 && mDigits.length >= 7) {
+                if (mDigits === cleanPhoneDigits || mDigits.endsWith(cleanPhoneDigits) || cleanPhoneDigits.endsWith(mDigits)) {
+                  return true;
+                }
+              }
+              return false;
+            });
+          } catch (e) {}
         }
 
-        if (!snap.empty) {
-          const approvedDoc = snap.docs.find((d) => {
-            const data = d.data();
-            return data.approvalStatus === 'approved' || data.verificationStatus === 'approved' || data.verificationStatus === 'verified' || data.isVerified === true;
-          });
-          const targetDoc = approvedDoc || snap.docs[0];
-          const userDoc = targetDoc.data();
+        // If not found in users and target is farmer, check farmers collection
+        if (!matchedDoc && (!targetRole || targetRole === 'farmer')) {
+          try {
+            const farmersSnap = await getDocs(collection(db, 'farmers'));
+            matchedDoc = farmersSnap.docs.find((d) => {
+              const data = d.data();
+              const docEmail = (data.email || '').trim().toLowerCase();
+              if (docEmail && docEmail === cleanId) return true;
+              const rawMobile = data.mobile || '';
+              if (rawMobile && rawMobile === identifier) return true;
+              const mDigits = rawMobile.replace(/\D/g, '');
+              if (cleanPhoneDigits.length >= 7 && mDigits.length >= 7) {
+                if (mDigits === cleanPhoneDigits || mDigits.endsWith(cleanPhoneDigits) || cleanPhoneDigits.endsWith(mDigits)) {
+                  return true;
+                }
+              }
+              return false;
+            });
+          } catch (e) {}
+        }
+
+        if (matchedDoc) {
+          const userDoc = matchedDoc.data();
           const { password: _, ...profile } = userDoc;
+          const userRole = normalizeRole(profile.role || targetRole);
 
           const isApproved =
+            userRole === 'customer' ||
+            userRole === 'admin' ||
             profile.approvalStatus === 'approved' ||
             profile.verificationStatus === 'approved' ||
             profile.verificationStatus === 'verified' ||
@@ -220,7 +295,8 @@ export const userService = {
 
           return {
             ...profile,
-            id: targetDoc.id,
+            id: matchedDoc.id,
+            role: userRole,
             isVerified: isApproved,
             verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || 'pending'),
             approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || 'pending'),
@@ -234,16 +310,22 @@ export const userService = {
     // 2. Check local users
     const localUsers = getLocalRegisteredUsers();
     const found = localUsers.find((u) => {
-      if (role && u.role !== role) return false;
-      if (u.email.toLowerCase() === cleanId) return true;
-      if (u.mobile === identifier) return true;
-      const mDigits = u.mobile.replace(/\D/g, '');
-      return cleanPhoneDigits.length >= 7 && (mDigits === cleanPhoneDigits || mDigits.endsWith(cleanPhoneDigits));
+      const uRole = normalizeRole(u.role);
+      if (targetRole && uRole !== targetRole) return false;
+      if (u.email && u.email.toLowerCase().trim() === cleanId) return true;
+      if (u.mobile && (u.mobile === identifier || u.mobile.trim() === identifier.trim())) return true;
+      const mDigits = (u.mobile || '').replace(/\D/g, '');
+      return cleanPhoneDigits.length >= 7 && (mDigits === cleanPhoneDigits || mDigits.endsWith(cleanPhoneDigits) || cleanPhoneDigits.endsWith(mDigits));
     });
 
     if (found) {
       const { passwordHash: _, ...profile } = found;
-      return profile;
+      const uRole = normalizeRole(profile.role || targetRole);
+      return {
+        ...profile,
+        role: uRole,
+        isVerified: uRole === 'customer' ? true : profile.isVerified,
+      };
     }
 
     // Do NOT auto-register new accounts on invalid credentials
@@ -413,7 +495,7 @@ export const userService = {
             ...(existing || {}),
             ...profile,
             id: docId,
-            role: existing?.role === 'admin' ? 'admin' : (profile.role || existing?.role || 'farmer'),
+            role: existing?.role === 'admin' ? 'admin' : normalizeRole(profile.role || existing?.role || 'farmer'),
             isVerified: isApproved,
             verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || existing?.verificationStatus || 'pending'),
             approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || existing?.approvalStatus || 'pending'),
@@ -444,7 +526,7 @@ export const userService = {
             ...(existing || {}),
             ...profile,
             id: docId,
-            role: existing?.role === 'admin' ? 'admin' : (profile.role || existing?.role || 'farmer'),
+            role: existing?.role === 'admin' ? 'admin' : normalizeRole(profile.role || existing?.role || 'farmer'),
             isVerified: isApproved,
             verificationStatus: isApproved ? 'approved' : (profile.verificationStatus || existing?.verificationStatus || 'pending'),
             approvalStatus: isApproved ? 'approved' : (profile.approvalStatus || existing?.approvalStatus || 'pending'),
@@ -452,6 +534,28 @@ export const userService = {
           userMap.set(key, merged);
           userMap.set(docId, merged);
         });
+
+        // Also check consumers collection in Firestore
+        try {
+          const cSnap = await getDocs(collection(db, 'consumers'));
+          cSnap.forEach((d) => {
+            const { password: _, ...profile } = d.data() as any;
+            const docId = d.id;
+            const key = (profile.email || docId).toLowerCase().trim();
+            const existing = userMap.get(key) || userMap.get(docId);
+            const merged: UserProfile = {
+              ...(existing || {}),
+              ...profile,
+              id: docId,
+              role: 'customer',
+              isVerified: true,
+              verificationStatus: 'approved' as const,
+              approvalStatus: 'approved' as const,
+            };
+            userMap.set(key, merged);
+            userMap.set(docId, merged);
+          });
+        } catch (e) {}
       } catch (err) {
         console.warn('[Firebase] userService.getAll error:', err);
       }
