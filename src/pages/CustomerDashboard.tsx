@@ -21,6 +21,7 @@ import {
   Loader2,
   Ban,
   LogOut,
+  Trash2,
 } from 'lucide-react';
 import { Order, Product, UserProfile, UserRole } from '../types';
 import { orderService } from '../services/orderService';
@@ -46,13 +47,36 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   onSelectProduct,
   onOpenAuth,
 }) => {
-  const { user, logout, updateProfile } = useAuth();
+  const { user, logout, updateProfile, deleteAccount } = useAuth();
   const { language, t } = useLanguage();
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [nearbyFarmers, setNearbyFarmers] = useState<UserProfile[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Account Deletion States
+  const [deleteAccountModalOpen, setDeleteAccountModalOpen] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setIsDeletingAccount(true);
+    try {
+      await deleteAccount();
+      alert(
+        language === 'te'
+          ? 'మీ వినియోగదారు ఖాతా విజయవంతంగా తొలగించబడింది.'
+          : 'Your Consumer account has been permanently deleted.'
+      );
+      setDeleteAccountModalOpen(false);
+      onOpenAuth?.('login', 'customer');
+    } catch (err: any) {
+      alert('Failed to delete account: ' + (err.message || err));
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
 
   // Profile Edit State
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -303,11 +327,20 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
             <button
               onClick={logout}
-              className="bg-emerald-900/60 hover:bg-rose-600 text-white font-bold text-xs sm:text-sm px-4 py-3 rounded-2xl border border-white/20 transition-colors flex items-center gap-1.5"
+              className="bg-emerald-900/60 hover:bg-stone-700 text-white font-bold text-xs sm:text-sm px-4 py-3 rounded-2xl border border-white/20 transition-colors flex items-center gap-1.5"
               title="Logout from Customer Dashboard"
             >
               <LogOut className="w-4 h-4" />
               <span>Logout</span>
+            </button>
+
+            <button
+              onClick={() => setDeleteAccountModalOpen(true)}
+              className="bg-emerald-900/60 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm px-4 py-3 rounded-2xl border border-white/20 transition-colors flex items-center gap-1.5"
+              title="Delete Consumer Account"
+            >
+              <Trash2 className="w-4 h-4 text-rose-300" />
+              <span>Delete Account</span>
             </button>
           </div>
         </div>
@@ -710,6 +743,23 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 </div>
               </div>
 
+              <div className="pt-3 border-t border-stone-200 mt-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-rose-700">{language === 'te' ? 'ఖాతా శాశ్వత తొలగింపు' : 'Delete Account'}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditProfileOpen(false);
+                      setDeleteAccountModalOpen(true);
+                    }}
+                    className="text-xs font-extrabold text-rose-600 hover:text-rose-800 hover:underline flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{language === 'te' ? 'శాశ్వతంగా తొలగించండి' : 'Permanently Delete'}</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="pt-2 flex gap-3">
                 <button
                   type="button"
@@ -781,6 +831,50 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Consumer Account Deletion Confirmation Modal */}
+      {deleteAccountModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-rose-200 p-6 sm:p-7 text-center">
+            <div className="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-7 h-7" />
+            </div>
+            <h3 className="font-black text-lg text-stone-900 mb-2">
+              {language === 'te' ? 'వినియోగదారు ఖాతాను ఖచ్చితంగా తొలగించాలనుకుంటున్నారా?' : 'Permanently Delete Consumer Account?'}
+            </h3>
+            <p className="text-xs text-stone-600 leading-relaxed mb-6">
+              {language === 'te'
+                ? 'మీరు మీ ఖాతాను తొలగించిన తర్వాత, మీ ప్రొఫైల్ వివరాలు మరియు ఖాతా రికార్డులు శాశ్వతంగా తొలగించబడతాయి. మీరు స్వయంచాలకంగా లాగౌట్ చేయబడతారు.'
+                : 'All your consumer profile records and account details will be permanently removed from the platform. You will be logged out immediately.'}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteAccountModalOpen(false)}
+                disabled={isDeletingAccount}
+                className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold py-3 rounded-xl text-xs transition-colors"
+              >
+                {language === 'te' ? 'రద్దు చేయండి (Cancel)' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={isDeletingAccount}
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold py-3 rounded-xl text-xs transition-colors shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {isDeletingAccount ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>{language === 'te' ? 'అవును, తొలగించండి' : 'Yes, Delete Account'}</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -20,6 +20,7 @@ interface AuthContextType {
   loginWithGoogle: (intendedRole?: UserRole) => Promise<boolean>;
   register: (data: Partial<UserProfile> & { password?: string }) => Promise<boolean>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<boolean>;
   updateProfile: (updates: Partial<UserProfile>) => void;
   sendPasswordReset: (email: string) => Promise<void>;
   resendVerificationLink: () => Promise<void>;
@@ -474,6 +475,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('farmconnect_logout_trigger');
   };
 
+  const deleteAccount = async (): Promise<boolean> => {
+    if (!user) return false;
+    const userId = user.id;
+    try {
+      await userService.deleteAccount(userId);
+    } catch (err) {
+      console.warn('Delete account error in userService:', err);
+    }
+    await logout();
+    return true;
+  };
+
   const updateProfile = (updates: Partial<UserProfile>) => {
     if (user) {
       const updated = { ...user, ...updates };
@@ -524,6 +537,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         register,
         logout,
+        deleteAccount,
         updateProfile,
         sendPasswordReset,
         resendVerificationLink,

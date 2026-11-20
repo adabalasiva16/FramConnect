@@ -66,7 +66,16 @@ export const productService = {
     return saveLocalProduct(product);
   },
 
-  async delete(productId: string): Promise<boolean> {
+  async delete(productId: string, requestedByUserId?: string): Promise<boolean> {
+    const product = await this.getById(productId);
+    if (!product) return false;
+
+    // Verify ownership: only the owner or an admin can delete the product
+    if (requestedByUserId && product.farmerId !== requestedByUserId && requestedByUserId !== 'admin') {
+      console.warn('[Security] Unauthorized product deletion attempt by user:', requestedByUserId);
+      return false;
+    }
+
     if (isFirebaseConfigured()) {
       try {
         await deleteDoc(doc(db, 'products', productId));

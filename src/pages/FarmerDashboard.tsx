@@ -50,7 +50,7 @@ interface FarmerDashboardProps {
 }
 
 export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToChat, onOpenAuth }) => {
-  const { user, updateProfile, logout } = useAuth();
+  const { user, updateProfile, logout, deleteAccount } = useAuth();
   const { language, t } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales' | 'profile'>('products');
@@ -58,6 +58,10 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [dbApprovalStatus, setDbApprovalStatus] = useState<boolean | null>(null);
+
+  // Account Deletion States
+  const [deleteAccountModalOpen, setDeleteAccountModalOpen] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   // Modal states for Product Add / Edit
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -477,9 +481,36 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
   };
 
   const handleDeleteProduct = async (productId: string) => {
+    const targetProduct = products.find((p) => p.id === productId);
+    if (!targetProduct || (user && targetProduct.farmerId !== user.id)) {
+      alert(language === 'te' ? 'మీరు మీ స్వంత ఉత్పత్తులను మాత్రమే తొలగించగలరు.' : 'You can only delete your own products.');
+      return;
+    }
     if (window.confirm(language === 'te' ? 'ఈ పంట వివరాలను తొలగించాలనుకుంటున్నారా?' : 'Are you sure you want to delete this crop listing?')) {
-      await productService.delete(productId);
+      const success = await productService.delete(productId, user?.id);
+      if (success) {
+        alert(language === 'te' ? 'పంట జాబితా విజయవంతంగా తొలగించబడింది.' : 'Crop listing deleted successfully.');
+      }
       loadDashboardData();
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setIsDeletingAccount(true);
+    try {
+      await deleteAccount();
+      alert(
+        language === 'te'
+          ? 'మీ రైతు ఖాతా విజయవంతంగా తొలగించబడింది.'
+          : 'Your Farmer account has been permanently deleted.'
+      );
+      setDeleteAccountModalOpen(false);
+      onOpenAuth?.('login', 'farmer');
+    } catch (err: any) {
+      alert('Failed to delete account: ' + (err.message || err));
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
@@ -1438,6 +1469,33 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
                 </>
               )}
             </button>
+
+            {/* Danger Zone: Farmer Account Deletion */}
+            <div className="mt-8 pt-6 border-t border-stone-200">
+              <div className="bg-rose-50 border border-rose-200 rounded-3xl p-6 sm:p-7">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-extrabold text-sm sm:text-base text-rose-950 flex items-center gap-2">
+                      <Trash2 className="w-4 h-4 text-rose-600" />
+                      <span>{language === 'te' ? 'రైతు ఖాతా శాశ్వత తొలగింపు (Delete Farmer Account)' : 'Delete Farmer Account'}</span>
+                    </h4>
+                    <p className="text-xs text-rose-700 mt-1 max-w-xl">
+                      {language === 'te'
+                        ? 'మీ ఖాతాను తొలగిస్తే మీ ప్రొఫైల్ వివరాలు మరియు మీరు లిస్ట్ చేసిన అన్ని పంటలు శాశ్వతంగా తొలగించబడతాయి. ఈ చర్యను రద్దు చేయడం సాధ్యం కాదు.'
+                        : 'Permanently remove your farmer account, listed crops, and profile records from FarmConnect. This action cannot be undone.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteAccountModalOpen(true)}
+                    className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs px-5 py-3 rounded-2xl shadow-sm transition-all whitespace-nowrap shrink-0 flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>{language === 'te' ? 'ఖాతాను తొలగించండి' : 'Delete My Account'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -1829,6 +1887,50 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onNavigateToCh
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Farmer Account Deletion Confirmation Modal */}
+      {deleteAccountModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-rose-200 p-6 sm:p-7 text-center">
+            <div className="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-7 h-7" />
+            </div>
+            <h3 className="font-black text-lg text-stone-900 mb-2">
+              {language === 'te' ? 'రైతు ఖాతాను ఖచ్చితంగా తొలగించాలనుకుంటున్నారా?' : 'Permanently Delete Farmer Account?'}
+            </h3>
+            <p className="text-xs text-stone-600 leading-relaxed mb-6">
+              {language === 'te'
+                ? 'మీరు మీ ఖాతాను తొలగించిన తర్వాత, మీ అన్ని పంటల జాబితాలు, విక్రయ వివరాలు మరియు ప్రొఫైల్ రికార్డులు శాశ్వతంగా తీసివేయబడతాయి. మీరు స్వయంచాలకంగా లాగౌట్ చేయబడతారు.'
+                : 'All your farm listings, crop data, and profile records will be permanently removed from the platform. You will be logged out immediately.'}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteAccountModalOpen(false)}
+                disabled={isDeletingAccount}
+                className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold py-3 rounded-xl text-xs transition-colors"
+              >
+                {language === 'te' ? 'రద్దు చేయండి (Cancel)' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={isDeletingAccount}
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold py-3 rounded-xl text-xs transition-colors shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {isDeletingAccount ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>{language === 'te' ? 'అవును, తొలగించండి' : 'Yes, Delete Account'}</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

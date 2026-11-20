@@ -1,6 +1,6 @@
 import { UserProfile, UserRole } from '../types';
-import { db, isFirebaseConfigured } from '../lib/firebase';
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where } from 'firebase/firestore';
+import { db, auth, isFirebaseConfigured } from '../lib/firebase';
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 
 export interface UserAccount extends UserProfile {
   passwordHash?: string;
@@ -246,28 +246,76 @@ export const userService = {
       return profile;
     }
 
-    // Auto-register fallback so users are never blocked by missing account records
-    const isEmail = cleanId.includes('@');
-    const newAccount: UserAccount = {
-      id: 'usr_' + Math.random().toString(36).substring(2, 9),
-      fullName: isEmail ? cleanId.split('@')[0] : 'FarmConnect User',
-      email: isEmail ? cleanId : `${cleanPhoneDigits || 'user'}@farmconnect.local`,
-      mobile: isEmail ? '+91 98480 12345' : identifier,
-      village: 'Tenali',
-      mandal: 'Tenali',
-      district: 'Guntur',
-      state: 'Andhra Pradesh',
-      pincode: '522201',
-      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200',
-      role: role || 'customer',
-      isVerified: true,
-      verificationStatus: 'verified',
-      createdAt: new Date().toISOString(),
-      passwordHash: (role === 'farmer' ? 'farmer123' : (role === 'admin' ? 'farmconnect123' : 'farmer123'))
-    };
-    await userService.registerUser(newAccount);
-    const { passwordHash: _, ...profile } = newAccount;
-    return profile;
+    // Do NOT auto-register new accounts on invalid credentials
+    return null;
+  },
+
+  async deleteAccount(userId: string): Promise<boolean> {
+    if (!userId) return false;
+
+    // 1. Delete user from Firebase Firestore if configured
+    if (isFirebaseConfigured()) {
+      try {
+        await deleteDoc(doc(db, 'users', userId));
+      } catch (e) {
+        console.warn('[Firebase] users doc delete fallback:', e);
+      }
+      try {
+        await deleteDoc(doc(db, 'farmers', userId));
+      } catch (e) {}
+      try {
+        await deleteDoc(doc(db, 'consumers', userId));
+      } catch (e) {}
+
+      // Delete all products listed by this user from Firestore
+      try {
+        const prodQuery = query(collection(db, 'products'), where('farmerId', '==', userId));
+        const prodSnap = await getDocs(prodQuery);
+        for (const pDoc of prodSnap.docs) {
+          await deleteDoc(pDoc.ref);
+        }
+      } catch (e) {
+        console.warn('[Firebase] user products delete fallback:', e);
+      }
+    }
+
+    // 2. Remove from local storage registered users
+    const localUsers = getLocalRegisteredUsers();
+    const updatedUsers = localUsers.filter((u) => u.id !== userId);
+    localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(updatedUsers));
+
+    // 3. Remove from local storage farmers
+    try {
+      const farmersRaw = localStorage.getItem('farmconnect_farmers_v1');
+      if (farmersRaw) {
+        const farmers = JSON.parse(farmersRaw);
+        const updatedFarmers = farmers.filter((f: any) => f.id !== userId);
+        localStorage.setItem('farmconnect_farmers_v1', JSON.stringify(updatedFarmers));
+      }
+    } catch (e) {}
+
+    // 4. Remove this user's products from local storage products
+    try {
+      const prodsRaw = localStorage.getItem('farmconnect_products_v1');
+      if (prodsRaw) {
+        const prods = JSON.parse(prodsRaw);
+        const updatedProds = prods.filter((p: any) => p.farmerId !== userId);
+        localStorage.setItem('farmconnect_products_v1', JSON.stringify(updatedProds));
+      }
+    } catch (e) {}
+
+    // 5. Delete Firebase Auth user if matching currentUser
+    try {
+      if (auth.currentUser && auth.currentUser.uid === userId) {
+        await auth.currentUser.delete();
+      }
+    } catch (e) {
+      console.warn('[Firebase Auth] delete currentUser error:', e);
+    }
+
+    // 6. Notify storage listeners to update UI globally
+    window.dispatchEvent(new CustomEvent('farmconnect_storage_update', { detail: { key: 'account_deleted' } }));
+    return true;
   },
 
   async getUserById(id: string, email?: string): Promise<UserProfile | null> {

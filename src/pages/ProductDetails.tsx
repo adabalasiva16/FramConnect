@@ -16,8 +16,10 @@ import {
   Plus,
   Minus,
   Sparkles,
+  Trash2,
 } from 'lucide-react';
 import { Product, Review } from '../types';
+import { productService } from '../services/productService';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -65,6 +67,20 @@ export const ProductDetails: React.FC<ProductDetailsProps> = ({
     addToCart(product, quantity);
     setAddedToast(true);
     setTimeout(() => setAddedToast(false), 2000);
+  };
+
+  const handleDeleteMyProduct = async () => {
+    if (!user || user.id !== product.farmerId) {
+      alert(language === 'te' ? 'మీరు మీ స్వంత ఉత్పత్తులను మాత్రమే తొలగించగలరు.' : 'You can only delete your own products.');
+      return;
+    }
+    if (window.confirm(language === 'te' ? 'ఈ పంట వివరాలను మార్కెట్ నుండి శాశ్వతంగా తొలగించాలనుకుంటున్నారా?' : 'Are you sure you want to permanently delete this listing from the marketplace?')) {
+      const success = await productService.delete(product.id, user.id);
+      if (success) {
+        alert(language === 'te' ? 'పంట జాబితా విజయవంతంగా తొలగించబడింది.' : 'Product listing deleted successfully.');
+        onBack();
+      }
+    }
   };
 
   const handleSubmitReview = (e: React.FormEvent) => {
@@ -187,6 +203,16 @@ export const ProductDetails: React.FC<ProductDetailsProps> = ({
                   <MessageSquare className="w-3.5 h-3.5" />
                   <span>{t('contactFarmer')}</span>
                 </button>
+
+                {user && user.id === product.farmerId && (
+                  <button
+                    onClick={handleDeleteMyProduct}
+                    className="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                    <span>{language === 'te' ? 'నా పంట జాబితాను తొలగించు' : 'Delete My Listing'}</span>
+                  </button>
+                )}
               </div>
             </div>
 
